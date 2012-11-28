@@ -1,59 +1,147 @@
 //
-//  QBKOverlayMenuView.h
-//  QBKOverlayMenuView
+//  RTFlyoutMenu.h
+//  RTFlyoutMenu
 //
-//  Created by Sendoa Portuondo on 11/05/12.
-//  Copyright (c) 2012 Qbikode Solutions, S.L. All rights reserved.
+//  Created by Aleksandar Vacić on 27.11.12..
+//  Copyright (c) 2012. Aleksandar Vacić. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
 
+
 typedef enum {
-    kQBKOverlayMenuViewPositionDefault,
-    kQBKOverlayMenuViewPositionTop,
-    kQBKOverlayMenuViewPositionBottom
-} QBKOverlaMenuViewPosition;
+	kRTFlyoutMenuKindStatic,			//	subview of some other view, will scroll as usual
+	kRTFlyoutMenuKindHovering			//	hovers above and is constantly visible on its position, regardless of other content scroll
+} RTFlyoutMenuKind;
 
-struct QBKOverlayMenuViewOffset {
-    CGFloat bottomOffset;
-    CGFloat topOffset;
-};
-typedef struct QBKOverlayMenuViewOffset QBKOverlayMenuViewOffset;
 
-@protocol QBKOverlayMenuViewDelegate;
 
-@interface QBKOverlayMenuView : UIView
-{
-    UIButton *_mainButton;                  // referencia al botón principal. Es el encargado de iniciar el despliegue o repliegue del control
-    UIImageView *_mainBackgroundImageView;  // imagen de fondo principal. Solo se muestra con el control desplegado.
-}
+//	towards what edge will main menu unfold
+//	this is ignored for kRTFlyoutMenuKindStatic
+typedef enum {
+	kRTFlyoutMenuUnfoldDirectionTop,
+	kRTFlyoutMenuUnfoldDirectionLeft,
+	kRTFlyoutMenuUnfoldDirectionBottom,
+	kRTFlyoutMenuUnfoldDirectionRight
+} RTFlyoutMenuUnfoldDirection;
 
-@property (nonatomic, weak, readonly) id<QBKOverlayMenuViewDelegate> delegate;
-@property (nonatomic, weak) UIView *parentView;                                 // la vista que contendrá a este control
-@property (nonatomic, readonly) QBKOverlaMenuViewPosition position;
-@property (nonatomic, readonly) BOOL unfolded;                                  // el control está desplegado o no?
-@property (nonatomic, readonly) QBKOverlayMenuViewOffset offset;                // desplazamiento con respecto al borde inferior/superior del parentView
-@property (nonatomic, strong, readonly) UIView *contentView;                    // contenedor de los botones adicionales
-@property (nonatomic, strong, readonly) NSMutableArray *additionalButtons;      // colección de botones adicionales agregados por el usuario
 
-- (id)initWithDelegate:(id <QBKOverlayMenuViewDelegate>)delegate position:(QBKOverlaMenuViewPosition)position offset:(QBKOverlayMenuViewOffset)offset;
-- (id)initWithDelegate:(id <QBKOverlayMenuViewDelegate>)delegate position:(QBKOverlaMenuViewPosition)position;
-- (void)addButtonWithImage:(UIImage *)image index:(NSInteger)index;
+
+//	position where to place the main menu button, inside given parent view
+//	this is ignored for kRTFlyoutMenuKindStatic
+typedef enum {
+	kRTFlyoutMenuPositionTop,			//	top center, for static menus
+//	kRTFlyoutMenuPositionLeft,			//	left center, for static menus - this is vertically laid-out main menu
+	kRTFlyoutMenuPositionBottom,		//	bottom center, for static menus
+//	kRTFlyoutMenuPositionRight,			//	right center, for static menus - this is vertically laid-out main menu
+	kRTFlyoutMenuPositionTopLeft,		//	for hover menus
+	kRTFlyoutMenuPositionTopRight,		//	for hover menus
+	kRTFlyoutMenuPositionBottomRight,	//	for hover menus
+	kRTFlyoutMenuPositionBottomLeft		//	for hover menus
+} RTFlyoutMenuPosition;
+
+
+
+//	##	visual options (these are keys for Options dictionary)
+
+//	size for main button, used with kRTFlyoutMenuKindHovering, ignored with kRTFlyoutMenuKindStatic
+extern NSString *const RTFlyoutMenuUIOptionMainButtonSize;
+//	size for unfolded main menu, used with kRTFlyoutMenuKindStatic, ignored with kRTFlyoutMenuKindHovering
+extern NSString *const RTFlyoutMenuUIOptionMainStaticSize;
+//	menu margins
+extern NSString *const RTFlyoutMenuUIOptionMenuMargins;
+//	inner button size
+extern NSString *const RTFlyoutMenuUIOptionInnerButtonSize;
+//	menu content padding
+extern NSString *const RTFlyoutMenuUIOptionContentInsets;
+//
+extern NSString *const RTFlyoutMenuUIOptionInterItemSpacing;
+//	
+extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
+
+
+
+@class RTFlyoutItem;
+@protocol RTFlyoutMenuDelegate;
+@interface RTFlyoutMenu : UIView
+
+//	##	properties
+@property (nonatomic, weak) UIView *parentView;
+
+@property (nonatomic, weak, readonly) id<RTFlyoutMenuDelegate> delegate;
+@property (nonatomic, readonly) RTFlyoutMenuKind kind;
+@property (nonatomic, readonly) RTFlyoutMenuPosition position;
+@property (nonatomic, readonly) RTFlyoutMenuUnfoldDirection unfoldDirection;
+@property (nonatomic, readonly) BOOL unfolded;
+@property (nonatomic, strong, readonly) UIView *contentView;
+
+
+@property (nonatomic, strong) NSMutableArray *items;
+
+//	##	methods
+- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate kind:(RTFlyoutMenuKind)kind position:(RTFlyoutMenuPosition)position unfoldDirection:(RTFlyoutMenuUnfoldDirection)direction options:(NSDictionary *)options;
+
+- (RTFlyoutItem *)addItemWithImage:(UIImage *)image parentItem:(RTFlyoutItem *)parentItem;
+- (RTFlyoutItem *)addItemWithTitle:(NSString *)title parentItem:(RTFlyoutItem *)parentItem;
+//- (RTFlyoutItem *)addItemWithImage:(UIImage *)image title:(NSString *)title parentItem:(RTFlyoutItem *)parentItem;
+//
+//- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
+//- (RTFlyoutItem *)insertItemWithTitle:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
+//- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image title:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
 @end
 
-@protocol QBKOverlayMenuViewDelegate <NSObject>
+
+
+
+
+
+@protocol RTFlyoutMenuDelegate <NSObject>
 
 @optional
-- (void)overlayMenuView:(QBKOverlayMenuView *)overlayMenuView didActivateAdditionalButtonWithIndex:(NSInteger)index;
-- (void)didPerformUnfoldActionInOverlayMenuView:(QBKOverlayMenuView *)overlaymenuView;
-- (void)didPerformFoldActionInOverlayMenuView:(QBKOverlayMenuView *)overlaymenuView;
+- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didActivateItemWithIndex:(NSInteger)index;
+- (void)flyoutMenuDidFold:(RTFlyoutMenu *)flyoutMenu;
+- (void)flyoutMenuDidUnfold:(RTFlyoutMenu *)flyoutMenu;
 
 @end
 
-// Notificaciones
-extern NSString *QBKOverlayMenuDidPerformUnfoldActionNotification;
-extern NSString *QBKOverlayMenuDidPerformFoldActionNotification;
 
-// Esta notitificación lleva una clave para el userInfo con el nombre "QBKButtonIndex" que albergará el index del botón pulsado (NSInteger)
-#define QBKButtonIndexKey @"QBKButtonIndex"
-extern NSString *QBKOverlayMenuDidActivateAdditionalButtonNotification;
+
+//	##	private API
+
+@interface RTFlyoutMenu ()
+
+//	options
+@property (nonatomic) CGSize mainButtonSize;
+@property (nonatomic) CGSize menuHoverSize;
+@property (nonatomic) CGSize menuStaticSize;
+@property (nonatomic) UIEdgeInsets menuMargins;
+@property (nonatomic) CGSize innerItemSize;
+@property (nonatomic) UIEdgeInsets contentInsets;
+@property (nonatomic) CGFloat interItemSpacing;
+@property (nonatomic) CGFloat animationDuration;
+
+//	local
+@property (nonatomic, weak) id<RTFlyoutMenuDelegate> delegate;
+@property (nonatomic, readwrite) RTFlyoutMenuKind kind;
+@property (nonatomic, readwrite) RTFlyoutMenuPosition position;
+@property (nonatomic, readwrite) RTFlyoutMenuUnfoldDirection unfoldDirection;
+@property (nonatomic, readwrite) BOOL unfolded;
+@property (nonatomic, strong, readwrite) UIView *contentView;
+
+@property (nonatomic, strong) UIButton *mainButton;
+@property (nonatomic, strong) UIImageView *mainBackgroundImageView;
+
+/*
+- (void)setupMainButton;
+- (void)setupContentView;
+- (void)mainButtonPressed;
+- (void)innerButtonPressed:(id)sender;
+- (void)unfoldWithAnimationDuration:(float)duration;
+- (void)foldWithAnimationDuration:(float)duration;
+- (CGRect)createFoldedMainFrameForPosition:(RTFlyoutMenuPosition)position;
+- (CGRect)createUnfoldedMainFrameForPosition:(RTFlyoutMenuPosition)position;
+- (CGRect)createFoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position;
+- (CGRect)createUnfoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position;
+ */
+@end
+

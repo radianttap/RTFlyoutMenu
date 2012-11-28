@@ -7,7 +7,8 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "RTFlyoutMenu.h"
 
-@interface RTViewController : UIViewController
+@interface RTViewController : UIViewController < RTFlyoutMenuDelegate >
 
 @end

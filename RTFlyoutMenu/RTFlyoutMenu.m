@@ -1,170 +1,215 @@
 //
-//  QBKOverlayMenuView.m
-//  QBKOverlayMenuView
+//  RTFlyoutMenu.m
+//  RTFlyoutMenu
 //
-//  Created by Sendoa Portuondo on 11/05/12.
-//  Copyright (c) 2012 Qbikode Solutions, S.L. All rights reserved.
+//  Created by Aleksandar Vacić on 27.11.12..
+//  Copyright (c) 2012. Aleksandar Vacić. All rights reserved.
 //
 
-#import "QBKOverlayMenuView.h"
+#import "RTFlyoutMenu.h"
+#import "RTFlyoutItem.h"
 
-#define QBK_OVERLAY_MENU_MAX_ADDITIONAL_BUTTONS 4               // sin usar por el momento
-#define QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_WIDTH 22            // anchura del frame de los botones adicionales
-#define QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_HEIGHT 22           // altura del frame de los botones adicionales
-#define QBK_OVERLAY_MENU_CONTENT_VIEW_PADDING 5                 // pading a los lados del contenedor de botones adicionales
-#define QBK_OVERLAY_MENU_VIEW_WIDTH 44                          // anchura del control cuando aparece como un botón flotante
-#define QBK_OVERLAY_MENU_VIEW_HEIGHT 44                         // altura del control cuando aparece como un botón flotante
-#define QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_WIDTH 28              // anchura del botón flotante
-#define QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_HEIGHT 28             // altura del botón flotante
-#define QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_Y_OFFSET 1            // desplazamiento vertical del botón principal para que ajustar el centrado vertical
-#define QBK_OVERLAY_MENU_VIEW_ADDITIONAL_BUTTONS_Y_OFFSET 1     // desplazamiento vertical de los botones adicionales para que ajustar el centrado vertical
-#define QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS 5              // márgenes horizontales del control con respecto a los bordes de la vista contenedora
-#define QBK_OVERLAY_MENU_VIEW_TOP_MARGIN 10                     // margen superior del control con respecto a los bordes de la vista contenedora
-#define QBK_OVERLAY_MENU_VIEW_BOTTOM_MARGIN 10                  // margen inferior del control con respecto a los bordes de la vista contenedora
-#define QBK_OVERLAY_MENU_VIEW_ANIMATION_DURATION 0.2            // duración de la animación de despliegue al pulsar el botón principal
+#define BUTTONS_COUNT_MAX	4
 
-// Notificaciones
-NSString *QBKOverlayMenuDidActivateAdditionalButtonNotification = @"QBKOverlayMenuDidActivateAdditionalButtonNotification";
-NSString *QBKOverlayMenuDidPerformUnfoldActionNotification = @"QBKOverlayMenuDidPerformUnfoldActionNotification";
-NSString *QBKOverlayMenuDidPerformFoldActionNotification = @"QBKOverlayMenuDidPerformFoldActionNotification";
 
-@interface QBKOverlayMenuView ()
+NSString *const RTFlyoutMenuUIOptionMainButtonSize = @"kRTFlyoutMenuUIOptionMainButtonSize";
+NSString *const RTFlyoutMenuUIOptionMainStaticSize = @"kRTFlyoutMenuUIOptionMainStaticSize";
+NSString *const RTFlyoutMenuUIOptionMenuMargins = @"kRTFlyoutMenuUIOptionMenuMargins";
+NSString *const RTFlyoutMenuUIOptionInnerButtonSize = @"kRTFlyoutMenuUIOptionInnerButtonSize";
+NSString *const RTFlyoutMenuUIOptionContentInsets = @"kRTFlyoutMenuUIOptionContentInsets";
+NSString *const RTFlyoutMenuUIOptionInterItemSpacing = @"kRTFlyoutMenuUIOptionInterItemSpacing";
+NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionAnimationDuration";
 
-- (void)setupMainButton;
-- (void)setupContentView;
-- (void)mainButtonPressed;
-- (void)additionalButtonPressed:(id)sender;
-- (void)unfoldWithAnimationDuration:(float)duration;
-- (void)foldWithAnimationDuration:(float)duration;
-- (CGRect)createFoldedMainFrameForPosition:(QBKOverlaMenuViewPosition)position;
-- (CGRect)createUnfoldedMainFrameForPosition:(QBKOverlaMenuViewPosition)position;
-- (CGRect)createFoldedContentViewFrameForPosition:(QBKOverlaMenuViewPosition)position;
-- (CGRect)createUnfoldedContentViewFrameForPosition:(QBKOverlaMenuViewPosition)position;
-@end
 
-@implementation QBKOverlayMenuView
-@synthesize parentView = _parentView;
-@synthesize delegate = _delegate;
-@synthesize position = _position;
-@synthesize unfolded = _unfolded;
-@synthesize offset = _offset;
-@synthesize contentView = _contentView;
-@synthesize additionalButtons = _additionalButtons;
+@implementation RTFlyoutMenu
 
-- (id)initWithDelegate:(id <QBKOverlayMenuViewDelegate>)delegate position:(QBKOverlaMenuViewPosition)position offset:(QBKOverlayMenuViewOffset)offset
-{
-    if (delegate && [delegate conformsToProtocol:@protocol(QBKOverlayMenuViewDelegate)]) {
+- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate kind:(RTFlyoutMenuKind)kind position:(RTFlyoutMenuPosition)position unfoldDirection:(RTFlyoutMenuUnfoldDirection)direction options:(NSDictionary *)options {
+    if (delegate && [delegate conformsToProtocol:@protocol(RTFlyoutMenuDelegate)]) {
         _delegate = delegate;
-        
-        _position = position;
-        _offset = offset;
-        _unfolded = NO;
-        
-        return (self = [self initWithFrame:CGRectZero]);
+		
+		[self setupDefaults];
+		_position = position;
+		_kind = kind;
+		_unfoldDirection = direction;
+		
+		self.items = [NSMutableArray array];
+		
+		//	process options
+		if (options) {
+			[options enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+				if ([key isEqualToString:RTFlyoutMenuUIOptionMainStaticSize])
+					self.menuStaticSize = [obj CGSizeValue];
+			}];
+		}
+
+        self = [self initWithFrame:CGRectZero];
+		return self;
     }
     
     return nil;
 }
 
-- (id)initWithDelegate:(id<QBKOverlayMenuViewDelegate>)delegate position:(QBKOverlaMenuViewPosition)position
-{
-    QBKOverlayMenuViewOffset offset = {0.0f,0.0f};
-    return [self initWithDelegate:delegate position:position offset:offset];
-}
-
-- (id)initWithFrame:(CGRect)frame
-{
+- (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     
     if (self) {
-        if (!_position) _position = kQBKOverlayMenuViewPositionDefault;
-        _unfolded = NO;
     }
     
     return self;
 }
 
-#pragma mark - Agregamos el control a la vista "del usuario"
-- (void)setParentView:(UIView *)view
-{
+- (void)setupDefaults {
+	_kind = kRTFlyoutMenuKindHovering;
+	_position = kRTFlyoutMenuPositionBottomRight;
+	_unfoldDirection = kRTFlyoutMenuUnfoldDirectionLeft;
+	_unfolded = NO;
+
+	_mainButtonSize = CGSizeMake(28, 28);
+	_menuHoverSize = CGSizeMake(44, 44);
+	_menuStaticSize = CGSizeZero;
+	_menuMargins = UIEdgeInsetsMake(5, 5, 5, 5);
+	_contentInsets = UIEdgeInsetsMake(5, 5, 5, 5);
+	_innerItemSize = CGSizeMake(22, 22);
+	_interItemSpacing = 5;
+	_animationDuration = .2;
+}
+
+- (void)setParentView:(UIView *)view {
     _parentView = view;
+
+	//	options processing
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		//	if some dimension is passed as 0, that means it should take the whole available space
+
+	}
+
     
-    // Configuración el frame
-    CGRect frame = [self createFoldedMainFrameForPosition:_position];
+	CGRect frame = CGRectZero;
+
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+		frame = [self createFoldedMainFrameForPosition:_position];
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		frame = [self createUnfoldedMainFrameForPosition:_position];
+	}
     [self setFrame:frame];
     [self setClipsToBounds:YES];
     
-    // Configuración del botón principal
-    [self setupMainButton];
-    [self addSubview:_mainButton];
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+		[self setupMainButton];
+		[self addSubview:_mainButton];
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		_mainButton = nil;
+	}
     
-    // Configuración de la imagen de fondo principal (solo visible con el menú desplegado)
-    _mainBackgroundImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"mainBackground.png"]];
+	UIImage *resizedBgImage = [[UIImage imageNamed:@"mainBackground.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(20, 5, 23, 5)];
+    _mainBackgroundImageView = [[UIImageView alloc] initWithImage:resizedBgImage];
+	_mainBackgroundImageView.frame = (CGRect){.size=self.bounds.size};
+	_mainBackgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
     [self addSubview:_mainBackgroundImageView];
     [self sendSubviewToBack:_mainBackgroundImageView];
     [_mainBackgroundImageView setAlpha:0.0f];
     
-    // Configuración de contenedor de botones adicionales
     [self setupContentView];
     [self addSubview:_contentView];
-    
-    // Añadimos el control a la vista indicada
+	
+	if (self.kind == kRTFlyoutMenuKindStatic) {
+		[self unfoldWithAnimationDuration:0];
+	}
+	
+	//	setup springs and struts
+	switch (self.position) {
+		case kRTFlyoutMenuPositionTop:
+			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin;
+			break;
+			
+		case kRTFlyoutMenuPositionBottom:
+			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin;
+			break;
+			
+		case kRTFlyoutMenuPositionTopLeft:
+			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin;
+			break;
+			
+		case kRTFlyoutMenuPositionTopRight:
+			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin;
+			break;
+			
+		case kRTFlyoutMenuPositionBottomLeft:
+			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleRightMargin;
+			break;
+			
+		case kRTFlyoutMenuPositionBottomRight:
+			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin;
+			break;
+			
+		default:
+			break;
+	}
+	
+//	_contentView.backgroundColor = [UIColor redColor];
+	
     [view addSubview:self];
+
 }
 
-#pragma mark - Métodos de acción
-- (void)mainButtonPressed
-{
-    // Ejecutamos las animaciones de despliegue y repliegue
+#pragma mark - Actions
+
+- (void)mainButtonPressed {
     if (!_unfolded) {
-        [self unfoldWithAnimationDuration:QBK_OVERLAY_MENU_VIEW_ANIMATION_DURATION];
+        [self unfoldWithAnimationDuration:self.animationDuration];
     } else {
-        [self foldWithAnimationDuration:QBK_OVERLAY_MENU_VIEW_ANIMATION_DURATION];
+        [self foldWithAnimationDuration:self.animationDuration];
     }
 }
 
-- (void)additionalButtonPressed:(id)sender
-{
-    if (_delegate && [_delegate respondsToSelector:@selector(overlayMenuView:didActivateAdditionalButtonWithIndex:)]) {
-        [_delegate overlayMenuView:self didActivateAdditionalButtonWithIndex:[_additionalButtons indexOfObject:sender]];
+- (void)innerButtonPressed:(id)sender {
+	NSLog(@"inner Button tap");
+    if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenu:didActivateItemWithIndex:)]) {
+//        [_delegate flyoutMenu:self didActivateItemWithIndex:[self.levelOneItems indexOfObject:sender]];
     }
-    
-    // Notificación con información adjunta (index del botón pulsado)
-    NSDictionary *info = [NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:[_additionalButtons indexOfObject:sender]] 
-                                                     forKey:QBKButtonIndexKey];
-    [[NSNotificationCenter defaultCenter] postNotificationName:QBKOverlayMenuDidActivateAdditionalButtonNotification 
-                                                        object:self 
-                                                      userInfo:info];
+
+    //	also send NSNotification?
 }
 
 #pragma mark - Rutinas de despliegue y repliegue
-- (void)unfoldWithAnimationDuration:(float)duration
-{
+- (void)unfoldWithAnimationDuration:(CGFloat)duration {
     [UIView animateWithDuration:duration animations:^{
         CGRect newFrame = [self createUnfoldedMainFrameForPosition:_position];
         [self setFrame:newFrame];
         [_mainBackgroundImageView setAlpha:.9f];
         
-        CGAffineTransform xform = CGAffineTransformMakeRotation(-M_PI_2);
+        CGAffineTransform xform = CGAffineTransformIdentity;
+		switch (self.position) {
+			case kRTFlyoutMenuPositionBottomRight:
+			case kRTFlyoutMenuPositionTopRight:
+				xform = CGAffineTransformMakeRotation(-M_PI_2);
+				break;
+				
+			case kRTFlyoutMenuPositionBottomLeft:
+			case kRTFlyoutMenuPositionTopLeft:
+				xform = CGAffineTransformMakeRotation(M_PI_2);
+				break;
+				
+			default:
+				break;
+		}
         [_mainButton setTransform:xform];
         
         _unfolded = YES;
     } completion:^(BOOL finished) {
         [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-left.png"] forState:UIControlStateNormal];
         
-        // Aviso al delegate
-        if (_delegate && [_delegate respondsToSelector:@selector(didPerformUnfoldActionInOverlayMenuView:)]) {
-            [_delegate didPerformUnfoldActionInOverlayMenuView:self];
+        if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenuDidUnfold:)]) {
+            [_delegate flyoutMenuDidUnfold:self];
         }
         
-        // Notificación
-        [[NSNotificationCenter defaultCenter] postNotificationName:QBKOverlayMenuDidPerformUnfoldActionNotification 
-                                                            object:self 
-                                                          userInfo:nil];
+		//	also send NSNotification?
     }];
 }
 
-- (void)foldWithAnimationDuration:(float)duration
+- (void)foldWithAnimationDuration:(CGFloat)duration
 {
     [UIView animateWithDuration:duration animations:^{
         CGRect newFrame = [self createFoldedMainFrameForPosition:_position];
@@ -180,115 +225,213 @@ NSString *QBKOverlayMenuDidPerformFoldActionNotification = @"QBKOverlayMenuDidPe
         [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-up.png"] forState:UIControlStateNormal];
         
         // Aviso al delegate
-        if (_delegate && [_delegate respondsToSelector:@selector(didPerformFoldActionInOverlayMenuView:)]) {
-            [_delegate didPerformFoldActionInOverlayMenuView:self];
+        if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenuDidFold:)]) {
+            [_delegate flyoutMenuDidFold:self];
         }
         
-        // Notificación
-        [[NSNotificationCenter defaultCenter] postNotificationName:QBKOverlayMenuDidPerformFoldActionNotification
-                                                            object:self 
-                                                          userInfo:nil];
+		//	also send NSNotification?
     }];
 }
 
-#pragma mark - Métodos "convenient"
-- (void)addButtonWithImage:(UIImage *)image index:(NSInteger)index
-{
-    if (!_additionalButtons) _additionalButtons = [[NSMutableArray alloc] init];
+#pragma mark -
+
+- (RTFlyoutItem *)addItemWithImage:(UIImage *)image parentItem:(RTFlyoutItem *)parentItem {
+	
+	NSUInteger itemIndex = 0;
+	if (parentItem) {
+		itemIndex = [parentItem.items count];
+	} else {
+		itemIndex = [self.items count];
+	}
+
+	RTFlyoutItem *i = [RTFlyoutItem itemWithImage:image title:nil index:itemIndex];
+	
+	if (parentItem) {
+		[parentItem.items addObject:i];
+	} else {
+		[self.items addObject:i];
+	}
+	
+	return i;
+
+    /*
+    CGFloat maxButtonWidth = [_parentView bounds].size.width - (self.menuMargins.left + self.menuMargins.right + self.contentInsets.left + self.contentInsets.right);
+	if (self.kind == kRTFlyoutMenuKindHovering) maxButtonWidth -= self.menuHoverSize.width;
+	maxButtonWidth /= BUTTONS_COUNT_MAX;
     
-    // Calculamos la posición de los botones en el contentView
-    CGFloat tamHuecoBoton = (320 - (QBK_OVERLAY_MENU_VIEW_WIDTH + QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS * 2 + QBK_OVERLAY_MENU_CONTENT_VIEW_PADDING * 2 )) / QBK_OVERLAY_MENU_MAX_ADDITIONAL_BUTTONS;
+    CGFloat buttonCenterX = (maxButtonWidth - self.innerItemSize.width) / 2;
+    CGFloat buttonCenterY = (([_contentView bounds].size.height - self.innerItemSize.height) / 2);
     
-    CGFloat posXBotonCentrado = (tamHuecoBoton - QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_WIDTH) / 2;
-    CGFloat posYBotonCentrado = (([_contentView bounds].size.height - QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_HEIGHT) / 2) - QBK_OVERLAY_MENU_VIEW_ADDITIONAL_BUTTONS_Y_OFFSET;
+    CGFloat buttonX = (BUTTONS_COUNT_MAX - ([_levelOneItems count] + 1)) * maxButtonWidth + buttonCenterX;
     
-    CGFloat posXBoton = (QBK_OVERLAY_MENU_MAX_ADDITIONAL_BUTTONS - ([_additionalButtons count] + 1)) * tamHuecoBoton + posXBotonCentrado;
-    
-    // Configuramos el botón
-    UIButton *newButton = [[UIButton alloc] initWithFrame:CGRectMake(posXBoton, posYBotonCentrado, QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_WIDTH, QBK_OVERLAY_MENU_ADDITIONAL_BUTTONS_HEIGHT)];
+    UIButton *newButton = [[UIButton alloc] initWithFrame:CGRectMake(buttonX, buttonCenterY, self.innerItemSize.width, self.innerItemSize.height)];
     [newButton setBackgroundImage:image forState:UIControlStateNormal];
     [newButton setAutoresizingMask:UIViewAutoresizingNone];
-    [newButton addTarget:self action:@selector(additionalButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [newButton addTarget:self action:@selector(innerButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+    [_levelOneItems addObject:newButton];
     
-    // Registramos el nuevo botón
-    [_additionalButtons insertObject:newButton atIndex:index];
-    
-    // Añadimos el botón al contentView
     [_contentView addSubview:newButton];
+	 */
 }
 
-- (void)setupMainButton
-{
-    // Calculamos posición centrada del botón
-    CGFloat x = (QBK_OVERLAY_MENU_VIEW_WIDTH - QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_WIDTH) / 2;
-    CGFloat y = (QBK_OVERLAY_MENU_VIEW_HEIGHT - QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_HEIGHT) / 2 - QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_Y_OFFSET;
+- (RTFlyoutItem *)addItemWithTitle:(NSString *)title parentItem:(RTFlyoutItem *)parentItem {
+	
+	NSUInteger itemIndex = 0;
+	if (parentItem) {
+		itemIndex = [parentItem.items count];
+	} else {
+		itemIndex = [self.items count];
+	}
+	
+	RTFlyoutItem *i = [RTFlyoutItem itemWithImage:nil title:title index:itemIndex];
+	
+	if (parentItem) {
+		[parentItem.items addObject:i];
+	} else {
+		[self.items addObject:i];
+	}
+
+	return i;
+}
+
+
+#pragma mark - Setup frames and views
+
+- (void)setupMainButton {
+    CGFloat x = (self.menuHoverSize.width - self.mainButtonSize.width) / 2;
+    CGFloat y = (self.menuHoverSize.height - self.mainButtonSize.height) / 2;
     
-    _mainButton = [[UIButton alloc] initWithFrame:CGRectMake(x, y, QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_WIDTH, QBK_OVERLAY_MENU_VIEW_MAIN_BUTTON_HEIGHT)];
+    _mainButton = [[UIButton alloc] initWithFrame:CGRectMake(x, y, self.mainButtonSize.width, self.mainButtonSize.height)];
     [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-up.png"] forState:UIControlStateNormal];
-    [_mainButton setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
+	switch (self.position) {
+		case kRTFlyoutMenuPositionBottomRight:
+		case kRTFlyoutMenuPositionTopRight:
+			[_mainButton setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
+			break;
+			
+		case kRTFlyoutMenuPositionBottomLeft:
+		case kRTFlyoutMenuPositionTopLeft:
+			[_mainButton setAutoresizingMask:UIViewAutoresizingFlexibleRightMargin];
+			break;
+			
+		default:
+			[_mainButton setAutoresizingMask:UIViewAutoresizingNone];
+			break;
+	}
     [_mainButton addTarget:self action:@selector(mainButtonPressed) forControlEvents:UIControlEventTouchUpInside];
 }
 
-- (void)setupContentView
-{
-    _contentView = [[UIView alloc] initWithFrame:[self createFoldedContentViewFrameForPosition:_position]];
+- (void)setupContentView {
+	CGRect f = CGRectZero;
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+		f = [self createFoldedContentViewFrameForPosition:_position];
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		f = [self createUnfoldedContentViewFrameForPosition:_position];
+	}
+    _contentView = [[UIView alloc] initWithFrame:f];
     [_contentView setClipsToBounds:YES];
     [_contentView setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
 }
 
-// Configuración del frame del contentView cuando está REPLEGADO
-- (CGRect)createFoldedContentViewFrameForPosition:(QBKOverlaMenuViewPosition)position
-{
-    CGRect frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, 0, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+- (CGRect)createFoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position {
+    CGRect frame = CGRectZero;
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+		switch (position) {
+			case kRTFlyoutMenuPositionBottomRight:
+			case kRTFlyoutMenuPositionTopRight:
+				frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, 0, self.menuHoverSize.height);
+				break;
+				
+			case kRTFlyoutMenuPositionBottomLeft:
+			case kRTFlyoutMenuPositionTopLeft:
+				frame = CGRectMake([self bounds].origin.x + self.menuHoverSize.width, [self bounds].origin.y, 0, self.menuHoverSize.height);
+				break;
+				
+			default:
+				break;
+		}
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, 0, self.menuHoverSize.height);
+	}
     
     return frame;
 }
 
-// Configuración del frame del contentView cuando está DESPLEGADO
-- (CGRect)createUnfoldedContentViewFrameForPosition:(QBKOverlaMenuViewPosition)position
-{
-    CGRect frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, [self bounds].size.width - QBK_OVERLAY_MENU_VIEW_WIDTH, QBK_OVERLAY_MENU_VIEW_HEIGHT);
-    
+- (CGRect)createUnfoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position {
+    CGRect frame = CGRectZero;
+	if (self.kind == kRTFlyoutMenuKindHovering) {
+		switch (position) {
+			case kRTFlyoutMenuPositionBottomRight:
+			case kRTFlyoutMenuPositionTopRight:
+				frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, [self bounds].size.width - self.menuHoverSize.width, self.menuHoverSize.height);
+				break;
+				
+			case kRTFlyoutMenuPositionBottomLeft:
+			case kRTFlyoutMenuPositionTopLeft:
+				frame = CGRectMake([self bounds].origin.x + self.menuHoverSize.width, [self bounds].origin.y, [self bounds].size.width - self.menuHoverSize.width, self.menuHoverSize.height);
+				break;
+				
+			default:
+				break;
+		}
+	} else if (self.kind == kRTFlyoutMenuKindStatic) {
+		frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, (self.menuStaticSize.width) ? self.menuStaticSize.width : [self bounds].size.width, self.menuStaticSize.height);
+	}
+
     return frame;
 }
 
-// Configuración del frame de la vista principal cuando el control está REPLEGADO
-- (CGRect)createFoldedMainFrameForPosition:(QBKOverlaMenuViewPosition)position
-{
+- (CGRect)createFoldedMainFrameForPosition:(RTFlyoutMenuPosition)position {
     CGRect frame;
-    
-    switch (_position) {
-        case kQBKOverlayMenuViewPositionBottom:
-            frame = CGRectMake([_parentView bounds].size.width - (QBK_OVERLAY_MENU_VIEW_WIDTH + QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS), [_parentView bounds].size.height - (QBK_OVERLAY_MENU_VIEW_HEIGHT + QBK_OVERLAY_MENU_VIEW_BOTTOM_MARGIN + _offset.bottomOffset), QBK_OVERLAY_MENU_VIEW_WIDTH, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+
+    switch (position) {
+        case kRTFlyoutMenuPositionBottomRight:
+            frame = CGRectMake([_parentView bounds].size.width - (self.menuHoverSize.width + self.menuMargins.right), [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), self.menuHoverSize.width, self.menuHoverSize.height);
             break;
-        case kQBKOverlayMenuViewPositionTop:
-            frame = CGRectMake([_parentView bounds].size.width - (QBK_OVERLAY_MENU_VIEW_WIDTH + QBK_OVERLAY_MENU_VIEW_TOP_MARGIN), QBK_OVERLAY_MENU_VIEW_TOP_MARGIN + _offset.topOffset, QBK_OVERLAY_MENU_VIEW_WIDTH, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+        case kRTFlyoutMenuPositionBottomLeft:
+            frame = CGRectMake(self.menuMargins.left, [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), self.menuHoverSize.width, self.menuHoverSize.height);
+            break;
+        case kRTFlyoutMenuPositionTopRight:
+            frame = CGRectMake([_parentView bounds].size.width - (self.menuHoverSize.width + self.menuMargins.right), self.menuMargins.top, self.menuHoverSize.width, self.menuHoverSize.height);
+            break;
+        case kRTFlyoutMenuPositionTopLeft:
+            frame = CGRectMake(self.menuMargins.left, self.menuMargins.top, self.menuHoverSize.width, self.menuHoverSize.height);
             break;
         default:
-            frame = CGRectMake([_parentView bounds].size.width - (QBK_OVERLAY_MENU_VIEW_WIDTH + QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS), [_parentView bounds].size.height - (QBK_OVERLAY_MENU_VIEW_HEIGHT + QBK_OVERLAY_MENU_VIEW_BOTTOM_MARGIN + _offset.bottomOffset), QBK_OVERLAY_MENU_VIEW_WIDTH, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+            frame = CGRectZero;
             break;
     }
-    
+
     return frame;
 }
 
-// Configuración del frame de la vista principal cuando el control está DESPLEGADO
-- (CGRect)createUnfoldedMainFrameForPosition:(QBKOverlaMenuViewPosition)position
-{
+- (CGRect)createUnfoldedMainFrameForPosition:(RTFlyoutMenuPosition)position {
     CGRect frame;
-    
-    switch (_position) {
-        case kQBKOverlayMenuViewPositionBottom:
-            frame = CGRectMake(QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS, [[self superview] bounds].size.height - (QBK_OVERLAY_MENU_VIEW_HEIGHT + QBK_OVERLAY_MENU_VIEW_BOTTOM_MARGIN + _offset.bottomOffset), [[self superview] bounds].size.width - QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS * 2, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+
+    switch (position) {
+        case kRTFlyoutMenuPositionBottomRight:
+        case kRTFlyoutMenuPositionBottomLeft:
+            frame = CGRectMake(self.menuMargins.left, [[self superview] bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), [[self superview] bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
             break;
-        case kQBKOverlayMenuViewPositionTop:
-            frame = CGRectMake(QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS, QBK_OVERLAY_MENU_VIEW_TOP_MARGIN + _offset.topOffset, [[self superview] bounds].size.width - QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS * 2, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+
+        case kRTFlyoutMenuPositionTopRight:
+        case kRTFlyoutMenuPositionTopLeft:
+            frame = CGRectMake(self.menuMargins.left, self.menuMargins.top, [[self superview] bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
             break;
+
+        case kRTFlyoutMenuPositionBottom:
+            frame = CGRectMake(self.menuMargins.left, [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), [_parentView bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
+            break;
+
+        case kRTFlyoutMenuPositionTop:
+            frame = CGRectMake(self.menuMargins.left, self.menuMargins.top, (self.menuStaticSize.width > 0) ? self.menuStaticSize.width : [_parentView bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuStaticSize.height);
+            break;
+
         default:
-            frame = CGRectMake(QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS, [[self superview] bounds].size.height - (QBK_OVERLAY_MENU_VIEW_HEIGHT + QBK_OVERLAY_MENU_VIEW_BOTTOM_MARGIN + _offset.bottomOffset), [[self superview] bounds].size.width - QBK_OVERLAY_MENU_VIEW_HORIZONTAL_MARGINS * 2, QBK_OVERLAY_MENU_VIEW_HEIGHT);
+            frame = CGRectZero;
             break;
     }
-    
+
     return frame;
 }
 

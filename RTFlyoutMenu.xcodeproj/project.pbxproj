@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D01D077716663477005B3ECD /* RTFlyoutItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D01D077616663477005B3ECD /* RTFlyoutItem.m */; };
 		D0C267081664D19D008114B5 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C267071664D19D008114B5 /* UIKit.framework */; };
 		D0C2670A1664D19D008114B5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C267091664D19D008114B5 /* Foundation.framework */; };
 		D0C2670C1664D19D008114B5 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2670B1664D19D008114B5 /* CoreGraphics.framework */; };
@@ -16,7 +17,6 @@
 		D0C267411664D1D5008114B5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0C267311664D1D5008114B5 /* InfoPlist.strings */; };
 		D0C267441664D1D5008114B5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C267371664D1D5008114B5 /* main.m */; };
 		D0C267451664D1D5008114B5 /* RTAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C267391664D1D5008114B5 /* RTAppDelegate.m */; };
-		D0C267461664D1D5008114B5 /* RTFlyoutMenu-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0C2673A1664D1D5008114B5 /* RTFlyoutMenu-Info.plist */; };
 		D0C267471664D1D5008114B5 /* RTViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C2673D1664D1D5008114B5 /* RTViewController.m */; };
 		D0C2674B1664D224008114B5 /* RTViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = D0C267491664D224008114B5 /* RTViewController.xib */; };
 		D0C267581664D2FE008114B5 /* main-button-left.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C2674E1664D2FE008114B5 /* main-button-left.png */; };
@@ -31,6 +31,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D01D077516663477005B3ECD /* RTFlyoutItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTFlyoutItem.h; sourceTree = "<group>"; };
+		D01D077616663477005B3ECD /* RTFlyoutItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RTFlyoutItem.m; sourceTree = "<group>"; };
 		D0C267031664D19D008114B5 /* RTFlyoutMenu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RTFlyoutMenu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C267071664D19D008114B5 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D0C267091664D19D008114B5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -134,6 +136,8 @@
 				D0C2674D1664D2FE008114B5 /* img */,
 				D0C267561664D2FE008114B5 /* RTFlyoutMenu.h */,
 				D0C267571664D2FE008114B5 /* RTFlyoutMenu.m */,
+				D01D077516663477005B3ECD /* RTFlyoutItem.h */,
+				D01D077616663477005B3ECD /* RTFlyoutItem.m */,
 			);
 			path = RTFlyoutMenu;
 			sourceTree = "<group>";
@@ -209,7 +213,6 @@
 				D0C2673F1664D1D5008114B5 /* Default.png in Resources */,
 				D0C267401664D1D5008114B5 /* Default@2x.png in Resources */,
 				D0C267411664D1D5008114B5 /* InfoPlist.strings in Resources */,
-				D0C267461664D1D5008114B5 /* RTFlyoutMenu-Info.plist in Resources */,
 				D0C2674B1664D224008114B5 /* RTViewController.xib in Resources */,
 				D0C267581664D2FE008114B5 /* main-button-left.png in Resources */,
 				D0C267591664D2FE008114B5 /* main-button-left@2x.png in Resources */,
@@ -233,6 +236,7 @@
 				D0C267451664D1D5008114B5 /* RTAppDelegate.m in Sources */,
 				D0C267471664D1D5008114B5 /* RTViewController.m in Sources */,
 				D0C267601664D2FE008114B5 /* RTFlyoutMenu.m in Sources */,
+				D01D077716663477005B3ECD /* RTFlyoutItem.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -314,8 +318,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "RTFlyoutMenu/RTFlyoutMenu-Prefix.pch";
-				INFOPLIST_FILE = "RTFlyoutMenu/RTFlyoutMenu-Info.plist";
+				GCC_PREFIX_HEADER = "Demo/RTFlyoutMenu-Prefix.pch";
+				INFOPLIST_FILE = "Demo/RTFlyoutMenu-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -325,8 +329,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "RTFlyoutMenu/RTFlyoutMenu-Prefix.pch";
-				INFOPLIST_FILE = "RTFlyoutMenu/RTFlyoutMenu-Info.plist";
+				GCC_PREFIX_HEADER = "Demo/RTFlyoutMenu-Prefix.pch";
+				INFOPLIST_FILE = "Demo/RTFlyoutMenu-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -351,6 +355,7 @@
 				D0C2672C1664D19D008114B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
