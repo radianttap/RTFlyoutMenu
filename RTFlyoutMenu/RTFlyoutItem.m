@@ -10,9 +10,11 @@
 
 @interface RTFlyoutItem ()
 
-@property (nonatomic, strong) UIImage *image;
-@property (nonatomic, strong) NSString *title;
+@property (nonatomic, copy) UIImage *image;
+@property (nonatomic, copy) NSString *title;
 @property (nonatomic) NSUInteger index;
+@property (nonatomic, copy) UIImage *originalImage;
+@property (nonatomic, copy) NSString *originalTitle;
 
 @end
 
@@ -26,8 +28,11 @@
 		item.image = image;
 		item.title = title;
 		item.index = index;
+		item.originalImage = image;
+		item.originalTitle = title;
 		
 		[item setupItem];
+		item.userInteractionEnabled = YES;
 	}
 
 	return item;
@@ -47,6 +52,11 @@
 - (void)setupItem {
 
 	self.active = NO;
+	
+	//	look&feel
+	[self.titleLabel setFont:[UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0]];
+	self.titleLabel.shadowOffset = CGSizeMake(0, 1);
+	self.backgroundColor = [UIColor greenColor];
 
 	if (self.image) {
 		[self setImage:self.image forState:UIControlStateNormal];
@@ -59,8 +69,32 @@
 		[self setTitle:self.title forState:UIControlStateNormal];
 	}
 
+	[self resize];
+}
+
+- (void)resize {
 	[self sizeToFit];
 	
+	CGRect f = self.frame;
+	if (f.size.height < 28) f.size.height = 28;
+	self.frame = f;
 }
+
+- (void)updateWithChildItem:(RTFlyoutItem *)childItem {
+	
+	[self setTitle:childItem.title forState:UIControlStateNormal];
+	[self setImage:childItem.image forState:UIControlStateNormal];
+
+	[self resize];
+}
+
+- (void)resetToOriginal {
+
+	[self setTitle:self.originalTitle forState:UIControlStateNormal];
+	[self setImage:self.originalImage forState:UIControlStateNormal];
+
+	[self resize];
+}
+
 
 @end

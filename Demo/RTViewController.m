@@ -7,6 +7,7 @@
 //
 
 #import "RTViewController.h"
+#import "RTFlyoutItem.h"
 
 @interface RTViewController ()
 
@@ -47,11 +48,21 @@
 	BOOL iPad = ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad);
 	if (iPad) {
 		NSDictionary *options = @{
-			RTFlyoutMenuUIOptionMainStaticSize: [NSValue valueWithCGSize:CGSizeMake(0, 44)]
+			RTFlyoutMenuUIOptionMainStaticSize: [NSValue valueWithCGSize:CGSizeMake(0, 44)],
+			RTFlyoutMenuUIOptionInterItemSpacing: @20.0f
 		};
 		RTFlyoutMenu *m = [[RTFlyoutMenu alloc] initWithDelegate:self kind:kRTFlyoutMenuKindStatic position:kRTFlyoutMenuPositionTop unfoldDirection:kRTFlyoutMenuUnfoldDirectionBottom options:options];
 		self.topMenu = m;
 		[self.topMenu setParentView:self.menuContainerView];
+		
+		//	look & feel
+//		NSDictionary *lf = @{
+//			UITextAttributeFont : [UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0],
+//		};
+//		[[UILabel appearanceWhenContainedIn:[RTFlyoutItem class], nil] setFont:[UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0]];
+//		[[RTFlyoutItem appearance] setTitleTextAttributes:lf forState:UIControlStateNormal];
+		[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+		[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleShadowColor:[UIColor whiteColor] forState:UIControlStateNormal];
 
 		{
 			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"Store" parentItem:nil];
@@ -98,6 +109,8 @@
 		{
 			(void)[self.topMenu addItemWithTitle:@"iTunes" parentItem:nil];
 		}
+		
+		[self.topMenu setupAll];
 	}
 	
 }

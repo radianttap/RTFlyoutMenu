@@ -27,8 +27,10 @@ typedef enum {
 
 
 
-//	position where to place the main menu button, inside given parent view
-//	this is ignored for kRTFlyoutMenuKindStatic
+/*
+	for Hovering, this defines the corner where main button will be placed
+	for Static, this implicitly defines towards what edge where the sub-menus will be unfolding. Example: for Top, submenu will go towards bottom
+ */
 typedef enum {
 	kRTFlyoutMenuPositionTop,			//	top center, for static menus
 //	kRTFlyoutMenuPositionLeft,			//	left center, for static menus - this is vertically laid-out main menu
@@ -88,6 +90,9 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 //- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
 //- (RTFlyoutItem *)insertItemWithTitle:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
 //- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image title:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
+
+- (void)setupAll;
+
 @end
 
 
@@ -130,6 +135,8 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 
 @property (nonatomic, strong) UIButton *mainButton;
 @property (nonatomic, strong) UIImageView *mainBackgroundImageView;
+@property (nonatomic) BOOL submenuOpened;
+
 
 /*
 - (void)setupMainButton;
