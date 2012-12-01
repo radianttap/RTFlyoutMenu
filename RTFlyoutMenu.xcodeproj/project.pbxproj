@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D012A268166A3A590002A5C2 /* submenuBackground.png in Resources */ = {isa = PBXBuildFile; fileRef = D012A266166A3A590002A5C2 /* submenuBackground.png */; };
+		D012A269166A3A590002A5C2 /* submenuBackground@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D012A267166A3A590002A5C2 /* submenuBackground@2x.png */; };
 		D01D077716663477005B3ECD /* RTFlyoutItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D01D077616663477005B3ECD /* RTFlyoutItem.m */; };
 		D0C267081664D19D008114B5 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C267071664D19D008114B5 /* UIKit.framework */; };
 		D0C2670A1664D19D008114B5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C267091664D19D008114B5 /* Foundation.framework */; };
@@ -31,6 +33,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D012A266166A3A590002A5C2 /* submenuBackground.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = submenuBackground.png; sourceTree = "<group>"; };
+		D012A267166A3A590002A5C2 /* submenuBackground@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "submenuBackground@2x.png"; sourceTree = "<group>"; };
 		D01D077516663477005B3ECD /* RTFlyoutItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTFlyoutItem.h; sourceTree = "<group>"; };
 		D01D077616663477005B3ECD /* RTFlyoutItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RTFlyoutItem.m; sourceTree = "<group>"; };
 		D0C267031664D19D008114B5 /* RTFlyoutMenu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RTFlyoutMenu.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -145,6 +149,8 @@
 		D0C2674D1664D2FE008114B5 /* img */ = {
 			isa = PBXGroup;
 			children = (
+				D012A266166A3A590002A5C2 /* submenuBackground.png */,
+				D012A267166A3A590002A5C2 /* submenuBackground@2x.png */,
 				D0C2674E1664D2FE008114B5 /* main-button-left.png */,
 				D0C2674F1664D2FE008114B5 /* main-button-left@2x.png */,
 				D0C267501664D2FE008114B5 /* main-button-up.png */,
@@ -222,6 +228,8 @@
 				D0C2675D1664D2FE008114B5 /* mainBackground@2x.png in Resources */,
 				D0C2675E1664D2FE008114B5 /* rw-button.png in Resources */,
 				D0C2675F1664D2FE008114B5 /* rw-button@2x.png in Resources */,
+				D012A268166A3A590002A5C2 /* submenuBackground.png in Resources */,
+				D012A269166A3A590002A5C2 /* submenuBackground@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
