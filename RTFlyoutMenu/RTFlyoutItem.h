@@ -10,7 +10,7 @@
 
 @interface RTFlyoutItem : UIButton
 
-@property (nonatomic, getter = isActive) BOOL active;
+//@property (nonatomic, getter = isActive) BOOL active;
 @property (nonatomic) NSUInteger mainItemIndex;
 @property (nonatomic) NSUInteger subItemIndex;
 
