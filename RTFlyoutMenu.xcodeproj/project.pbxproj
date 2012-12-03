@@ -21,14 +21,8 @@
 		D0C267451664D1D5008114B5 /* RTAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C267391664D1D5008114B5 /* RTAppDelegate.m */; };
 		D0C267471664D1D5008114B5 /* RTViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C2673D1664D1D5008114B5 /* RTViewController.m */; };
 		D0C2674B1664D224008114B5 /* RTViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = D0C267491664D224008114B5 /* RTViewController.xib */; };
-		D0C267581664D2FE008114B5 /* main-button-left.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C2674E1664D2FE008114B5 /* main-button-left.png */; };
-		D0C267591664D2FE008114B5 /* main-button-left@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C2674F1664D2FE008114B5 /* main-button-left@2x.png */; };
-		D0C2675A1664D2FE008114B5 /* main-button-up.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267501664D2FE008114B5 /* main-button-up.png */; };
-		D0C2675B1664D2FE008114B5 /* main-button-up@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267511664D2FE008114B5 /* main-button-up@2x.png */; };
 		D0C2675C1664D2FE008114B5 /* mainBackground.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267521664D2FE008114B5 /* mainBackground.png */; };
 		D0C2675D1664D2FE008114B5 /* mainBackground@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267531664D2FE008114B5 /* mainBackground@2x.png */; };
-		D0C2675E1664D2FE008114B5 /* rw-button.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267541664D2FE008114B5 /* rw-button.png */; };
-		D0C2675F1664D2FE008114B5 /* rw-button@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0C267551664D2FE008114B5 /* rw-button@2x.png */; };
 		D0C267601664D2FE008114B5 /* RTFlyoutMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C267571664D2FE008114B5 /* RTFlyoutMenu.m */; };
 /* End PBXBuildFile section */
 
@@ -53,14 +47,8 @@
 		D0C2673C1664D1D5008114B5 /* RTViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTViewController.h; sourceTree = "<group>"; };
 		D0C2673D1664D1D5008114B5 /* RTViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RTViewController.m; sourceTree = "<group>"; };
 		D0C2674A1664D224008114B5 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/RTViewController.xib; sourceTree = "<group>"; };
-		D0C2674E1664D2FE008114B5 /* main-button-left.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "main-button-left.png"; sourceTree = "<group>"; };
-		D0C2674F1664D2FE008114B5 /* main-button-left@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "main-button-left@2x.png"; sourceTree = "<group>"; };
-		D0C267501664D2FE008114B5 /* main-button-up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "main-button-up.png"; sourceTree = "<group>"; };
-		D0C267511664D2FE008114B5 /* main-button-up@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "main-button-up@2x.png"; sourceTree = "<group>"; };
 		D0C267521664D2FE008114B5 /* mainBackground.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = mainBackground.png; sourceTree = "<group>"; };
 		D0C267531664D2FE008114B5 /* mainBackground@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "mainBackground@2x.png"; sourceTree = "<group>"; };
-		D0C267541664D2FE008114B5 /* rw-button.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "rw-button.png"; sourceTree = "<group>"; };
-		D0C267551664D2FE008114B5 /* rw-button@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "rw-button@2x.png"; sourceTree = "<group>"; };
 		D0C267561664D2FE008114B5 /* RTFlyoutMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RTFlyoutMenu.h; sourceTree = "<group>"; };
 		D0C267571664D2FE008114B5 /* RTFlyoutMenu.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RTFlyoutMenu.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -151,14 +139,8 @@
 			children = (
 				D012A266166A3A590002A5C2 /* submenuBackground.png */,
 				D012A267166A3A590002A5C2 /* submenuBackground@2x.png */,
-				D0C2674E1664D2FE008114B5 /* main-button-left.png */,
-				D0C2674F1664D2FE008114B5 /* main-button-left@2x.png */,
-				D0C267501664D2FE008114B5 /* main-button-up.png */,
-				D0C267511664D2FE008114B5 /* main-button-up@2x.png */,
 				D0C267521664D2FE008114B5 /* mainBackground.png */,
 				D0C267531664D2FE008114B5 /* mainBackground@2x.png */,
-				D0C267541664D2FE008114B5 /* rw-button.png */,
-				D0C267551664D2FE008114B5 /* rw-button@2x.png */,
 			);
 			path = img;
 			sourceTree = "<group>";
@@ -220,14 +202,8 @@
 				D0C267401664D1D5008114B5 /* Default@2x.png in Resources */,
 				D0C267411664D1D5008114B5 /* InfoPlist.strings in Resources */,
 				D0C2674B1664D224008114B5 /* RTViewController.xib in Resources */,
-				D0C267581664D2FE008114B5 /* main-button-left.png in Resources */,
-				D0C267591664D2FE008114B5 /* main-button-left@2x.png in Resources */,
-				D0C2675A1664D2FE008114B5 /* main-button-up.png in Resources */,
-				D0C2675B1664D2FE008114B5 /* main-button-up@2x.png in Resources */,
 				D0C2675C1664D2FE008114B5 /* mainBackground.png in Resources */,
 				D0C2675D1664D2FE008114B5 /* mainBackground@2x.png in Resources */,
-				D0C2675E1664D2FE008114B5 /* rw-button.png in Resources */,
-				D0C2675F1664D2FE008114B5 /* rw-button@2x.png in Resources */,
 				D012A268166A3A590002A5C2 /* submenuBackground.png in Resources */,
 				D012A269166A3A590002A5C2 /* submenuBackground@2x.png in Resources */,
 			);

@@ -9,89 +9,50 @@
 #import <UIKit/UIKit.h>
 
 
+//	main menu position
 typedef enum {
-	kRTFlyoutMenuKindStatic,			//	subview of some other view, will scroll as usual
-	kRTFlyoutMenuKindHovering			//	hovers above and is constantly visible on its position, regardless of other content scroll
-} RTFlyoutMenuKind;
-
-
-
-//	towards what edge will main menu unfold
-//	this is ignored for kRTFlyoutMenuKindStatic
-typedef enum {
-	kRTFlyoutMenuUnfoldDirectionTop,
-	kRTFlyoutMenuUnfoldDirectionLeft,
-	kRTFlyoutMenuUnfoldDirectionBottom,
-	kRTFlyoutMenuUnfoldDirectionRight
-} RTFlyoutMenuUnfoldDirection;
-
-
-
-/*
-	for Hovering, this defines the corner where main button will be placed
-	for Static, this implicitly defines towards what edge where the sub-menus will be unfolding. Example: for Top, submenu will go towards bottom
- */
-typedef enum {
-	kRTFlyoutMenuPositionTop,			//	top center, for static menus
-//	kRTFlyoutMenuPositionLeft,			//	left center, for static menus - this is vertically laid-out main menu
-	kRTFlyoutMenuPositionBottom,		//	bottom center, for static menus
-//	kRTFlyoutMenuPositionRight,			//	right center, for static menus - this is vertically laid-out main menu
-	kRTFlyoutMenuPositionTopLeft,		//	for hover menus
-	kRTFlyoutMenuPositionTopRight,		//	for hover menus
-	kRTFlyoutMenuPositionBottomRight,	//	for hover menus
-	kRTFlyoutMenuPositionBottomLeft		//	for hover menus
+	kRTFlyoutMenuPositionTop,		//	unfold-direction will be towards bottom
+	kRTFlyoutMenuPositionBottom		//	unfold-direction will be towards top
 } RTFlyoutMenuPosition;
 
 
 
-//	##	visual options (these are keys for Options dictionary)
+//	towards what edge will submenu unfold
+//	this is implicitly chosen based on main menu position
+typedef enum {
+	kRTFlyoutMenuUnfoldDirectionTop,
+	kRTFlyoutMenuUnfoldDirectionBottom
+} RTFlyoutMenuUnfoldDirection;
 
-//	size for main button, used with kRTFlyoutMenuKindHovering, ignored with kRTFlyoutMenuKindStatic
-extern NSString *const RTFlyoutMenuUIOptionMainButtonSize;
-//	size for unfolded main menu, used with kRTFlyoutMenuKindStatic, ignored with kRTFlyoutMenuKindHovering
-extern NSString *const RTFlyoutMenuUIOptionMainStaticSize;
+
+
+//	##	VISUAL OPTIONS (these are keys for Options dictionary)
 //	menu margins
 extern NSString *const RTFlyoutMenuUIOptionMenuMargins;
 //	inner button size
-extern NSString *const RTFlyoutMenuUIOptionInnerButtonSize;
+extern NSString *const RTFlyoutMenuUIOptionInnerItemSize;
 //	menu content padding
 extern NSString *const RTFlyoutMenuUIOptionContentInsets;
-//
-extern NSString *const RTFlyoutMenuUIOptionInterItemSpacing;
-//	
+//	how long will fold/unfold last
 extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 
 
 
 @class RTFlyoutItem;
-@protocol RTFlyoutMenuDelegate;
+@protocol RTFlyoutMenuDelegate, RTFlyoutMenuDataSource;
 @interface RTFlyoutMenu : UIView
 
 //	##	properties
-@property (nonatomic, weak) UIView *parentView;
+@property (nonatomic, weak) id<RTFlyoutMenuDelegate> delegate;
+@property (nonatomic, weak) id<RTFlyoutMenuDataSource> dataSource;
 
-@property (nonatomic, weak, readonly) id<RTFlyoutMenuDelegate> delegate;
-@property (nonatomic, readonly) RTFlyoutMenuKind kind;
 @property (nonatomic, readonly) RTFlyoutMenuPosition position;
 @property (nonatomic, readonly) RTFlyoutMenuUnfoldDirection unfoldDirection;
-@property (nonatomic, readonly) BOOL unfolded;
-@property (nonatomic, strong, readonly) UIView *contentView;
-
-
-@property (nonatomic, strong) NSMutableArray *items;
 
 //	##	methods
-- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate kind:(RTFlyoutMenuKind)kind position:(RTFlyoutMenuPosition)position unfoldDirection:(RTFlyoutMenuUnfoldDirection)direction options:(NSDictionary *)options;
+- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate dataSource:(id <RTFlyoutMenuDataSource>)dataSource position:(RTFlyoutMenuPosition)position options:(NSDictionary *)options;
 
-- (RTFlyoutItem *)addItemWithImage:(UIImage *)image parentItem:(RTFlyoutItem *)parentItem;
-- (RTFlyoutItem *)addItemWithTitle:(NSString *)title parentItem:(RTFlyoutItem *)parentItem;
-//- (RTFlyoutItem *)addItemWithImage:(UIImage *)image title:(NSString *)title parentItem:(RTFlyoutItem *)parentItem;
-//
-//- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
-//- (RTFlyoutItem *)insertItemWithTitle:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
-//- (RTFlyoutItem *)insertItemWithImage:(UIImage *)image title:(NSString *)title atIndex:(NSInteger)index parentItem:(RTFlyoutItem *)parentItem;
-
-- (void)setupAll;
+- (void)reloadData;
 
 @end
 
@@ -103,12 +64,21 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 @protocol RTFlyoutMenuDelegate <NSObject>
 
 @optional
-- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didActivateItemWithIndex:(NSInteger)index;
-- (void)flyoutMenuDidFold:(RTFlyoutMenu *)flyoutMenu;
-- (void)flyoutMenuDidUnfold:(RTFlyoutMenu *)flyoutMenu;
+- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectMainItemWithIndex:(NSInteger)index;
+- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectSubItemWithIndex:(NSInteger)subIndex mainMenuItemIndex:(NSInteger)mainIndex;
 
 @end
 
+
+
+@protocol RTFlyoutMenuDataSource <NSObject>
+
+- (NSUInteger)numberOfMainItemsInFlyoutMenu:(RTFlyoutMenu *)flyoutMenu;
+- (NSString *)flyoutMenu:(RTFlyoutMenu *)flyoutMenu titleForMainItem:(NSUInteger)mainItemIndex;
+- (NSUInteger)flyoutMenu:(RTFlyoutMenu *)flyoutMenu numberOfItemsInSubmenu:(NSUInteger)mainItemIndex;
+- (NSString *)flyoutMenu:(RTFlyoutMenu *)flyoutMenu titleForSubItem:(NSUInteger)subItemIndex inMainItem:(NSUInteger)mainItemIndex;
+
+@end
 
 
 //	##	private API
@@ -116,39 +86,28 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 @interface RTFlyoutMenu ()
 
 //	options
-@property (nonatomic) CGSize mainButtonSize;
-@property (nonatomic) CGSize menuHoverSize;
-@property (nonatomic) CGSize menuStaticSize;
 @property (nonatomic) UIEdgeInsets menuMargins;
 @property (nonatomic) CGSize innerItemSize;
 @property (nonatomic) UIEdgeInsets contentInsets;
+@property (nonatomic) UIEdgeInsets mainItemInsets;
+@property (nonatomic) UIEdgeInsets subItemInsets;
 @property (nonatomic) CGFloat interItemSpacing;
 @property (nonatomic) CGFloat animationDuration;
 
 //	local
-@property (nonatomic, weak) id<RTFlyoutMenuDelegate> delegate;
-@property (nonatomic, readwrite) RTFlyoutMenuKind kind;
 @property (nonatomic, readwrite) RTFlyoutMenuPosition position;
 @property (nonatomic, readwrite) RTFlyoutMenuUnfoldDirection unfoldDirection;
-@property (nonatomic, readwrite) BOOL unfolded;
-@property (nonatomic, strong, readwrite) UIView *contentView;
 
-@property (nonatomic, strong) UIButton *mainButton;
-@property (nonatomic, strong) UIImageView *mainBackgroundImageView;
-@property (nonatomic) BOOL submenuOpened;
+//	rendering
+@property (nonatomic, strong) NSMutableDictionary *submenus;
+@property (nonatomic, strong) NSMutableArray *mainItems;
+@property (nonatomic, strong) NSMutableArray *mainItemFrames;
+@property (nonatomic) NSInteger indexOfOpenSubmenu;
 
+//	from dataSource
+@property (nonatomic) NSUInteger numberOfMainItems;
+@property (nonatomic, strong) NSMutableArray *mainItemTitles;
+@property (nonatomic, strong) NSMutableArray *subItemTitles;
 
-/*
-- (void)setupMainButton;
-- (void)setupContentView;
-- (void)mainButtonPressed;
-- (void)innerButtonPressed:(id)sender;
-- (void)unfoldWithAnimationDuration:(float)duration;
-- (void)foldWithAnimationDuration:(float)duration;
-- (CGRect)createFoldedMainFrameForPosition:(RTFlyoutMenuPosition)position;
-- (CGRect)createUnfoldedMainFrameForPosition:(RTFlyoutMenuPosition)position;
-- (CGRect)createFoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position;
-- (CGRect)createUnfoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position;
- */
 @end
 

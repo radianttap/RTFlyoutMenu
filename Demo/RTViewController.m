@@ -11,11 +11,10 @@
 
 @interface RTViewController ()
 
-//@property (nonatomic, strong) RTFlyoutMenu *brMenu;
-//@property (nonatomic, strong) RTFlyoutMenu *tlMenu;
-@property (nonatomic, strong) RTFlyoutMenu *topMenu;
-
 @property (weak, nonatomic) IBOutlet UIView *menuContainerView;
+
+@property (nonatomic) NSArray *mainItems;
+@property (nonatomic) NSArray *subItems;
 
 @end
 
@@ -25,93 +24,42 @@
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
 
-
+	self.mainItems = @[@"Store", @"Mac", @"iPod", @"iPhone", @"iPad", @"iTunes"];
+	self.subItems = @[
+		@[@"New additions", @"Shop Mac", @"Shop iPad", @"Shop iPhone", @"Shop iPod"],
+		@[@"MacBook Air", @"MacBook Pro", @"Mac mini", @"iMac", @"Mac Pro", @"OS X Mountain Lion"],
+		@[@"iPod shuffle", @"iPod nano", @"iPod touch", @"iPod classic", @"Apple TV", @"Accessories"],
+		@[@"iPhone 5", @"Compare models", @"App Store"],
+		@[@"iPad with Retina display", @"iPad mini"],
+		@[]
+	];
+	
 }
 
 - (void)viewDidAppear:(BOOL)animated {
 	[super viewDidAppear:animated];
-/*
-    RTFlyoutMenu *m1 = [[RTFlyoutMenu alloc] initWithDelegate:self kind:kRTFlyoutMenuKindHovering position:kRTFlyoutMenuPositionBottomRight unfoldDirection:kRTFlyoutMenuUnfoldDirectionLeft options:nil];
-	self.brMenu = m1;
-    [self.brMenu setParentView:[self view]];
-    [self.brMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-    [self.brMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-    [self.brMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-    [self.brMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-	
-    RTFlyoutMenu *m2 = [[RTFlyoutMenu alloc] initWithDelegate:self kind:kRTFlyoutMenuKindHovering position:kRTFlyoutMenuPositionTopLeft unfoldDirection:kRTFlyoutMenuUnfoldDirectionRight options:nil];
-	self.tlMenu = m2;
-    [self.tlMenu setParentView:[self view]];
-    [self.tlMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-    [self.tlMenu addItemWithImage:[UIImage imageNamed:@"rw-button.png"]];
-*/
-	BOOL iPad = ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad);
-	if (iPad) {
-		NSDictionary *options = @{
-			RTFlyoutMenuUIOptionMainStaticSize: [NSValue valueWithCGSize:CGSizeMake(0, 44)],
-			RTFlyoutMenuUIOptionInterItemSpacing: @20.0f
-		};
-		RTFlyoutMenu *m = [[RTFlyoutMenu alloc] initWithDelegate:self kind:kRTFlyoutMenuKindStatic position:kRTFlyoutMenuPositionTop unfoldDirection:kRTFlyoutMenuUnfoldDirectionBottom options:options];
-		self.topMenu = m;
-		[self.topMenu setParentView:self.menuContainerView];
-		
-		//	look & feel
-//		NSDictionary *lf = @{
-//			UITextAttributeFont : [UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0],
-//		};
-//		[[UILabel appearanceWhenContainedIn:[RTFlyoutItem class], nil] setFont:[UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0]];
-//		[[RTFlyoutItem appearance] setTitleTextAttributes:lf forState:UIControlStateNormal];
-		[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
-		[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleShadowColor:[UIColor whiteColor] forState:UIControlStateNormal];
 
-		{
-			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"Store" parentItem:nil];
-			[self.topMenu addItemWithTitle:@"New additions" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Shop Mac" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Shop iPad" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Shop iPhone" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Shop iPod" parentItem:mainItem];
-		}
+	NSDictionary *options = @{
+		RTFlyoutMenuUIOptionInnerItemSize: [NSValue valueWithCGSize:CGSizeMake(44, 44)]
+	};
+	RTFlyoutMenu *m = [[RTFlyoutMenu alloc] initWithDelegate:self dataSource:self position:kRTFlyoutMenuPositionTop options:options];
 
-		{
-			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"Mac" parentItem:nil];
-			[self.topMenu addItemWithTitle:@"MacBook Air" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"MacBook Pro" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Mac mini" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"iMac" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Mac Pro" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"OS X Mountain Lion" parentItem:mainItem];
-		}
-		
-		{
-			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"iPod" parentItem:nil];
-			[self.topMenu addItemWithTitle:@"iPod shuffle" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"iPod nano" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"iPod touch" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"iPod classic" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Apple TV" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Accessories" parentItem:mainItem];
-		}
-		
-		{
-			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"iPhone" parentItem:nil];
-			[self.topMenu addItemWithTitle:@"iPhone 5" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"Compare models" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"App Store" parentItem:mainItem];
-		}
-		
-		{
-			RTFlyoutItem *mainItem = [self.topMenu addItemWithTitle:@"iPad" parentItem:nil];
-			[self.topMenu addItemWithTitle:@"iPad with Retina display" parentItem:mainItem];
-			[self.topMenu addItemWithTitle:@"iPad mini" parentItem:mainItem];
-		}
-		
-		{
-			(void)[self.topMenu addItemWithTitle:@"iTunes" parentItem:nil];
-		}
-		
-		[self.topMenu setupAll];
-	}
+	CGRect mf = m.frame;
+	CGRect cf = self.menuContainerView.bounds;
+
+	//	center menu in container view
+	CGFloat newOriginX = (cf.size.width - mf.size.width) / 2;
+	CGFloat newOriginY = (cf.size.height - mf.size.height) / 2;
+	if (newOriginX > 0) mf.origin.x = newOriginX;
+	if (newOriginY > 0) mf.origin.y = newOriginY;
+	m.frame = mf;
+
+//	m.backgroundColor = [UIColor redColor];
+	[self.menuContainerView addSubview:m];
+
+	//	look & feel
+	[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+	[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleShadowColor:[UIColor whiteColor] forState:UIControlStateNormal];
 	
 }
 
@@ -124,19 +72,40 @@
 }
 
 
+#pragma mark - RTFlyoutMenuDataSource
+
+- (NSUInteger)numberOfMainItemsInFlyoutMenu:(RTFlyoutMenu *)flyoutMenu {
+	return 6;
+}
+
+- (NSString *)flyoutMenu:(RTFlyoutMenu *)flyoutMenu titleForMainItem:(NSUInteger)mainItemIndex {
+	if (mainItemIndex >= [self.mainItems count]) return nil;
+
+	return [self.mainItems objectAtIndex:mainItemIndex];
+}
+
+- (NSUInteger)flyoutMenu:(RTFlyoutMenu *)flyoutMenu numberOfItemsInSubmenu:(NSUInteger)mainItemIndex {
+	if (mainItemIndex >= [self.mainItems count]) return 0;
+
+	return [[self.subItems objectAtIndex:mainItemIndex] count];
+}
+
+- (NSString *)flyoutMenu:(RTFlyoutMenu *)flyoutMenu titleForSubItem:(NSUInteger)subItemIndex inMainItem:(NSUInteger)mainItemIndex {
+	if (mainItemIndex >= [self.mainItems count]) return nil;
+	if (subItemIndex >= [[self.subItems objectAtIndex:mainItemIndex] count]) return nil;
+
+	return [[self.subItems objectAtIndex:mainItemIndex] objectAtIndex:subItemIndex];
+}
+
+
 #pragma mark - RTFlyoutMenuDelegate
 
-- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didActivateItemWithIndex:(NSInteger)index {
-    NSLog(@"Tap on inner item with index: %d", index);
+- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectMainItemWithIndex:(NSInteger)index {
+    NSLog(@"Tap on main item: %d", index);
 }
 
-- (void)flyoutMenuDidUnfold:(RTFlyoutMenu *)flyoutMenu {
-    NSLog(@"menu unfolded");
+- (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectSubItemWithIndex:(NSInteger)subIndex mainMenuItemIndex:(NSInteger)mainIndex {
+    NSLog(@"Tap on main/sub index: %d / %d", mainIndex, subIndex);
 }
-
-- (void)flyoutMenuDidFold:(RTFlyoutMenu *)flyoutMenu {
-    NSLog(@"menu folder");
-}
-
 
 @end

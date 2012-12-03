@@ -9,39 +9,57 @@
 #import "RTFlyoutMenu.h"
 #import "RTFlyoutItem.h"
 
-NSString *const RTFlyoutMenuUIOptionMainButtonSize = @"kRTFlyoutMenuUIOptionMainButtonSize";
-NSString *const RTFlyoutMenuUIOptionMainStaticSize = @"kRTFlyoutMenuUIOptionMainStaticSize";
 NSString *const RTFlyoutMenuUIOptionMenuMargins = @"kRTFlyoutMenuUIOptionMenuMargins";
-NSString *const RTFlyoutMenuUIOptionInnerButtonSize = @"kRTFlyoutMenuUIOptionInnerButtonSize";
+NSString *const RTFlyoutMenuUIOptionInnerItemSize = @"kRTFlyoutMenuUIOptionInnerItemSize";
 NSString *const RTFlyoutMenuUIOptionContentInsets = @"kRTFlyoutMenuUIOptionContentInsets";
-NSString *const RTFlyoutMenuUIOptionInterItemSpacing = @"kRTFlyoutMenuUIOptionInterItemSpacing";
 NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionAnimationDuration";
 
 
 @implementation RTFlyoutMenu
 
-- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate kind:(RTFlyoutMenuKind)kind position:(RTFlyoutMenuPosition)position unfoldDirection:(RTFlyoutMenuUnfoldDirection)direction options:(NSDictionary *)options {
+#pragma mark - Init
+
+- (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate dataSource:(id <RTFlyoutMenuDataSource>)dataSource position:(RTFlyoutMenuPosition)position options:(NSDictionary *)options {
     if (delegate && [delegate conformsToProtocol:@protocol(RTFlyoutMenuDelegate)]) {
         _delegate = delegate;
+        _dataSource = dataSource;
 		
 		[self setupDefaults];
+
 		_position = position;
-		_kind = kind;
-		_unfoldDirection = direction;
-		
-		self.items = [NSMutableArray array];
+		switch (position) {
+			case kRTFlyoutMenuPositionTop:
+				_unfoldDirection = kRTFlyoutMenuUnfoldDirectionBottom;
+				break;
+				
+			case kRTFlyoutMenuPositionBottom:
+				_unfoldDirection = kRTFlyoutMenuUnfoldDirectionTop;
+				break;
+				
+			default:
+				_unfoldDirection = kRTFlyoutMenuUnfoldDirectionBottom;
+				break;
+		}
 		
 		//	process options
 		if (options) {
 			[options enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-				if ([key isEqualToString:RTFlyoutMenuUIOptionMainStaticSize])
-					self.menuStaticSize = [obj CGSizeValue];
-				else if ([key isEqualToString:RTFlyoutMenuUIOptionInterItemSpacing])
-					self.interItemSpacing = (CGFloat)[(NSNumber *)obj floatValue];
+				if ([key isEqualToString:RTFlyoutMenuUIOptionContentInsets])
+					self.contentInsets = [obj UIEdgeInsetsValue];
+				else if ([key isEqualToString:RTFlyoutMenuUIOptionAnimationDuration])
+					self.animationDuration = (CGFloat)[(NSNumber *)obj floatValue];
+				else if ([key isEqualToString:RTFlyoutMenuUIOptionInnerItemSize])
+					self.innerItemSize = [obj CGSizeValue];
+				else if ([key isEqualToString:RTFlyoutMenuUIOptionMenuMargins])
+					self.menuMargins = [obj UIEdgeInsetsValue];
 			}];
 		}
-
+		
         self = [self initWithFrame:CGRectZero];
+		
+		[self fetchData];
+		[self renderMainMenu];
+		
 		return self;
     }
     
@@ -51,509 +69,349 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 - (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     
-    if (self) {
-    }
+    if (self) {}
     
     return self;
 }
 
 - (void)setupDefaults {
-	_kind = kRTFlyoutMenuKindHovering;
-	_position = kRTFlyoutMenuPositionBottomRight;
-	_unfoldDirection = kRTFlyoutMenuUnfoldDirectionLeft;
-	_unfolded = NO;
-	_submenuOpened = NO;
+	//	behavior
+	_position = kRTFlyoutMenuPositionTop;
+	_unfoldDirection = kRTFlyoutMenuUnfoldDirectionBottom;
+	_indexOfOpenSubmenu = -1;
 
-	_mainButtonSize = CGSizeMake(28, 28);
-	_menuHoverSize = CGSizeMake(44, 44);
-	_menuStaticSize = CGSizeZero;
+	//	look & feel
 	_menuMargins = UIEdgeInsetsMake(5, 5, 5, 5);
 	_contentInsets = UIEdgeInsetsMake(5, 5, 5, 5);
 	_innerItemSize = CGSizeMake(22, 22);
-	_interItemSpacing = 5;
+	_mainItemInsets = UIEdgeInsetsMake(4, 8, 4, 8);
+	_subItemInsets = UIEdgeInsetsMake(4, 8, 4, 8);
 	_animationDuration = .2;
+	
+	//	data
+	_numberOfMainItems = 0;
+	_mainItemTitles = [NSMutableArray array];
+	_subItemTitles = [NSMutableArray array];
+	
+	//	rendered
+	_mainItems = nil;
+	_mainItemFrames = nil;
+	_submenus = nil;
 }
 
-- (void)setParentView:(UIView *)view {
-    _parentView = view;
+
+#pragma mark - Data source
+
+- (void)fetchData {
+
+	if ([self.dataSource respondsToSelector:@selector(numberOfMainItemsInFlyoutMenu:)]) {
+		self.numberOfMainItems = [self.dataSource numberOfMainItemsInFlyoutMenu:self];
+
+		_mainItems = [NSMutableArray arrayWithCapacity:self.numberOfMainItems];
+		_mainItemFrames = [NSMutableArray arrayWithCapacity:self.numberOfMainItems];
+		_submenus = [NSMutableDictionary dictionaryWithCapacity:self.numberOfMainItems];
+	}
+
+	if ([self.dataSource respondsToSelector:@selector(flyoutMenu:titleForMainItem:)]) {
+		for (NSUInteger i = 0; i < self.numberOfMainItems; i++) {
+			NSString *t = [self.dataSource flyoutMenu:self titleForMainItem:i];
+			if ([t length] == 0) t = @"";
+			[self.mainItemTitles addObject:t];
+		}
+	}
+	
+	if ([self.dataSource respondsToSelector:@selector(flyoutMenu:numberOfItemsInSubmenu:)] && [self.dataSource respondsToSelector:@selector(flyoutMenu:titleForSubItem:inMainItem:)]) {
+
+		for (NSUInteger i = 0; i < self.numberOfMainItems; i++) {
+			NSUInteger numberOfSubItems = [self.dataSource flyoutMenu:self numberOfItemsInSubmenu:i];
+			NSMutableArray *a = [NSMutableArray array];
+			for (NSUInteger j = 0; j < numberOfSubItems; j++) {
+				NSString *t = [self.dataSource flyoutMenu:self titleForSubItem:j inMainItem:i];
+				if ([t length] == 0) t = @"";
+				[a addObject:t];
+			}
+			[self.subItemTitles addObject:a];
+		}
+	}
+	
+}
+
+
+#pragma mark - Rendering
+
+- (void)renderMainMenu {
+	
+	UIFont *buttonFont = [UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0];
+	CGFloat currentX = self.contentInsets.left, currentY = self.contentInsets.top, itemHeight = 0;
+
+	for (NSString *mainTitle in self.mainItemTitles) {
+		CGSize titleTextSize = [mainTitle sizeWithFont:buttonFont constrainedToSize:CGSizeMake(1000, 1000)];
+		if (titleTextSize.height < self.innerItemSize.height) titleTextSize.height = self.innerItemSize.height;
+
+		RTFlyoutItem *btn = [RTFlyoutItem buttonWithType:UIButtonTypeCustom];
+		btn.mainItemIndex = [self.mainItemTitles indexOfObject:mainTitle];
+		btn.subItemIndex = -1;
+		[btn setFrame:CGRectMake(currentX, currentY, titleTextSize.width + self.mainItemInsets.left + self.mainItemInsets.right, titleTextSize.height + self.mainItemInsets.top + self.mainItemInsets.bottom)];
+		[btn setTitleEdgeInsets:self.mainItemInsets];
+		[btn.titleLabel setFont:buttonFont];
+		[btn setBackgroundColor:[UIColor clearColor]];
+		[btn setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+		[btn setTitle:mainTitle forState:UIControlStateNormal];
+		[btn addTarget:self action:@selector(itemTapped:) forControlEvents:UIControlEventTouchUpInside];
+		
+		currentX += btn.bounds.size.width;
+		if (itemHeight < btn.bounds.size.height) itemHeight = btn.bounds.size.height;
+		
+//		[btn setBackgroundColor:[UIColor greenColor]];
+		[self addSubview:btn];
+		[self.mainItems addObject:btn];
+		[self.mainItemFrames addObject:[NSValue valueWithCGRect:btn.frame]];
+	}
+
+	CGRect f = self.frame;
+	f.size = CGSizeMake(currentX + self.contentInsets.right, itemHeight + self.contentInsets.top + self.contentInsets.bottom);
+	self.frame = f;
+
+	//	render background image
+	UIImage *resizedBgImage = [[UIImage imageNamed:@"mainBackground.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(20, 5, 23, 5)];
+    UIImageView *mainBackgroundImageView = [[UIImageView alloc] initWithImage:resizedBgImage];
+	mainBackgroundImageView.frame = (CGRect){.size=self.bounds.size};
+	mainBackgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+    [self addSubview:mainBackgroundImageView];
+    [self sendSubviewToBack:mainBackgroundImageView];
 
 }
+
+- (UIView *)renderSubmenuAtIndex:(NSUInteger)index {
+	
+	UIView *sv = nil;
+	
+	if ([self.submenus objectForKey:@(index)]) {
+		sv = [self.submenus objectForKey:@(index)];
+
+	} else {
+		UIFont *buttonFont = [UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0];
+		CGRect mainItemFrame = [[self.mainItemFrames objectAtIndex:index] CGRectValue];
+		
+		CGFloat currentX = self.contentInsets.left, currentY = self.contentInsets.top, itemWidth = 0;
+		sv = [[UIView alloc] initWithFrame:CGRectZero];
+		sv.clipsToBounds = YES;
+		
+		NSArray *subtitles = [self.subItemTitles objectAtIndex:index];
+		
+		if ([subtitles count] == 0) return sv;
+		
+		for (NSString *subTitle in subtitles) {
+			CGSize titleTextSize = [subTitle sizeWithFont:buttonFont constrainedToSize:CGSizeMake(1000, 1000)];
+			if (titleTextSize.height < self.innerItemSize.height) titleTextSize.height = self.innerItemSize.height;
+			
+			RTFlyoutItem *btn = [RTFlyoutItem buttonWithType:UIButtonTypeCustom];
+			btn.mainItemIndex = index;
+			btn.subItemIndex = [subtitles indexOfObject:subTitle];
+			[btn setFrame:CGRectMake(currentX, currentY, titleTextSize.width + self.subItemInsets.left + self.subItemInsets.right, titleTextSize.height + self.subItemInsets.top + self.subItemInsets.bottom)];
+			[btn setTitleEdgeInsets:self.subItemInsets];
+			[btn.titleLabel setFont:buttonFont];
+			[btn setBackgroundColor:[UIColor clearColor]];
+			[btn setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+			[btn setTitle:subTitle forState:UIControlStateNormal];
+			[btn addTarget:self action:@selector(itemTapped:) forControlEvents:UIControlEventTouchUpInside];
+			
+			currentY += btn.bounds.size.height;
+			if (itemWidth < btn.bounds.size.width) itemWidth = btn.bounds.size.width;
+			
+//			[btn setBackgroundColor:[UIColor greenColor]];
+			[sv addSubview:btn];
+		}
+		
+		CGRect f = sv.frame;
+		f.origin = CGPointMake(mainItemFrame.origin.x, mainItemFrame.origin.y + mainItemFrame.size.height - self.contentInsets.bottom);
+		f.size = CGSizeMake(itemWidth + self.contentInsets.left + self.contentInsets.right, currentY + self.contentInsets.bottom);
+		CGFloat diff = self.bounds.size.width - (f.origin.x + f.size.width);
+		if (diff < 0) f.origin.x += diff;
+		sv.frame = f;
+		
+		//	render background image
+		UIImage *resizedBgImage = [[UIImage imageNamed:@"submenuBackground.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(24, 5, 25, 5)];
+		UIImageView *bgImageView = [[UIImageView alloc] initWithImage:resizedBgImage];
+		bgImageView.frame = (CGRect){.size=sv.bounds.size};
+		bgImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+		[sv addSubview:bgImageView];
+		[sv sendSubviewToBack:bgImageView];
+		
+		[self.submenus setObject:sv forKey:@(index)];
+	}
+
+	return sv;
+}
+
+- (void)updateMainItem:(RTFlyoutItem *)item withTitle:(NSString *)newTitle {
+	
+	UIFont *buttonFont = item.titleLabel.font;
+	CGSize titleTextSize = [newTitle sizeWithFont:buttonFont constrainedToSize:CGSizeMake(1000, 1000)];
+	if (titleTextSize.height < self.innerItemSize.height) titleTextSize.height = self.innerItemSize.height;
+
+	//	re-calculate main item frames, find the difference between old and new frame size for tapped item
+	NSInteger itemIndex = [self.mainItems indexOfObject:item];
+	CGRect oldItemFrame = [[self.mainItemFrames objectAtIndex:itemIndex] CGRectValue];
+	CGSize newFrameSize = CGSizeMake(titleTextSize.width + self.mainItemInsets.left + self.mainItemInsets.right, titleTextSize.height + self.mainItemInsets.top + self.mainItemInsets.bottom);
+	CGFloat diff = newFrameSize.width - oldItemFrame.size.width;
+	
+	if (diff == 0) return;
+
+	//	update tapped item
+	CGRect f = oldItemFrame;
+	f.size = newFrameSize;
+	f.origin.x -= diff;
+	[self.mainItemFrames replaceObjectAtIndex:itemIndex withObject:[NSValue valueWithCGRect:f]];
+	
+	//	update items before the tapped one
+	for (NSInteger i = 0; i < itemIndex; i++) {
+		CGRect f = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
+		f.origin.x -= diff;
+		[self.mainItemFrames replaceObjectAtIndex:i withObject:[NSValue valueWithCGRect:f]];
+	}
+	
+	//	update menu frame
+	CGRect menuFrame = self.frame;
+	menuFrame.origin.x -= diff;
+	menuFrame.size.width += diff;
+	
+	//	animate the change
+	[UIView animateWithDuration:self.animationDuration animations:^{
+		self.frame = menuFrame;
+		for (NSInteger i = 0; i <= itemIndex; i++) {
+			CGRect f = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
+			[(RTFlyoutItem *)self.mainItems setFrame:f];
+		}
+		
+	} completion:^(BOOL finished) {
+		[item setTitle:newTitle forState:UIControlEventTouchUpInside];
+	}];
+
+}
+
 
 #pragma mark - Actions
 
-- (void)mainButtonPressed {
-    if (!_unfolded) {
-        [self unfoldWithAnimationDuration:self.animationDuration];
-    } else {
-        [self foldWithAnimationDuration:self.animationDuration];
-    }
-}
-
-- (void)innerButtonPressed:(RTFlyoutItem *)sender {
+- (void)itemTapped:(RTFlyoutItem *)sender {
 	NSLog(@"inner Button tap");
-
-    if (sender.parentItem) {
-		//	get tapped item text and replace the parent item text
-		[sender.parentItem updateWithChildItem:sender];
+	
+	BOOL isMainItem = (sender.subItemIndex == -1);
+	//	if main item, then open/close that particular submenu
+	if (isMainItem) {
 		
-		//	collapse the submenu
-		[sender.submenu removeFromSuperview];
+		if (_indexOfOpenSubmenu == sender.mainItemIndex) {
+			//	close this submenu
+			UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
+			CGRect f = sv.frame, forig = f;
+			f.size = CGSizeMake(f.size.width, 0);
+			[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
+				sv.frame = f;
+			} completion:^(BOOL finished) {
+				[sv removeFromSuperview];
+				sv.frame = forig;
+			}];
+
+			//	mark that nothing is open
+			_indexOfOpenSubmenu = -1;
+			
+		} else if (_indexOfOpenSubmenu > -1) {
+			//	close previously submenu
+			{
+				UIView *sv = [self renderSubmenuAtIndex:self.indexOfOpenSubmenu];
+				CGRect f = sv.frame, forig = f;
+				f.size = CGSizeMake(f.size.width, 0);
+				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
+					sv.frame = f;
+				} completion:^(BOOL finished) {
+					[sv removeFromSuperview];
+					sv.frame = forig;
+				}];
+			}
+			
+			//	open tapped submenu
+			{
+				UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
+				CGRect f = sv.frame, ffinal = f;
+				f.size = CGSizeMake(f.size.width, 0);
+				sv.frame = f;
+				[self addSubview:sv];
+				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
+					sv.frame = ffinal;
+				} completion:nil];
+			}
+			
+			//	mark as open
+			_indexOfOpenSubmenu = sender.mainItemIndex;
+
+		} else {
+			//	open this submenu
+			{
+				UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
+				CGRect f = sv.frame, ffinal = f;
+				f.size = CGSizeMake(f.size.width, 0);
+				sv.frame = f;
+				[self addSubview:sv];
+				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
+					sv.frame = ffinal;
+				} completion:nil];
+			}
+			
+			//	mark as open
+			_indexOfOpenSubmenu = sender.mainItemIndex;
+			
+		}
 
 	} else {
-		//	open submenu
-		[self openSubmenuForParentItem:sender unfoldDirection:kRTFlyoutMenuUnfoldDirectionBottom];
-		
-	}
-	
-	if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenu:didActivateItemWithIndex:)]) {
-//        [_delegate flyoutMenu:self didActivateItemWithIndex:[self.levelOneItems indexOfObject:sender]];
-    }
+		//	if subitem, then update main item text
+		RTFlyoutItem *mainBtn = [self.mainItems objectAtIndex:sender.mainItemIndex];
+		NSString *subTitle = [sender titleForState:UIControlStateNormal];
+		[self updateMainItem:mainBtn withTitle:subTitle];
 
-    //	also send NSNotification?
-}
-
-#pragma mark - 
-- (void)unfoldWithAnimationDuration:(CGFloat)duration {
-    [UIView animateWithDuration:duration animations:^{
-        CGRect newFrame = [self createUnfoldedMainFrameForPosition:_position];
-        [self setFrame:newFrame];
-        [_mainBackgroundImageView setAlpha:.9f];
-        
-        CGAffineTransform xform = CGAffineTransformIdentity;
-		switch (self.position) {
-			case kRTFlyoutMenuPositionBottomRight:
-			case kRTFlyoutMenuPositionTopRight:
-				xform = CGAffineTransformMakeRotation(-M_PI_2);
-				break;
-				
-			case kRTFlyoutMenuPositionBottomLeft:
-			case kRTFlyoutMenuPositionTopLeft:
-				xform = CGAffineTransformMakeRotation(M_PI_2);
-				break;
-				
-			default:
-				break;
+		//	and close the submenu
+		{
+			UIView *sv = [self renderSubmenuAtIndex:self.indexOfOpenSubmenu];
+			CGRect f = sv.frame;
+			f.size = CGSizeMake(f.size.width, 0);
+			[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
+				sv.frame = f;
+			} completion:^(BOOL finished) {
+				[sv removeFromSuperview];
+			}];
 		}
-        [_mainButton setTransform:xform];
-        
-        _unfolded = YES;
-    } completion:^(BOOL finished) {
-        [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-left.png"] forState:UIControlStateNormal];
-        
-        if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenuDidUnfold:)]) {
-            [_delegate flyoutMenuDidUnfold:self];
-        }
-        
-		//	also send NSNotification?
-    }];
-}
-
-- (void)foldWithAnimationDuration:(CGFloat)duration {
-    [UIView animateWithDuration:duration animations:^{
-        CGRect newFrame = [self createFoldedMainFrameForPosition:_position];
-        [self setFrame:newFrame];
-        [_contentView setFrame:[self createFoldedContentViewFrameForPosition:_position]];
-        [_mainBackgroundImageView setAlpha:0.0f];
-        
-        CGAffineTransform xform = CGAffineTransformMakeRotation(0);
-        [_mainButton setTransform:xform];
-        
-        _unfolded = NO;
-    } completion:^(BOOL finished) {
-        [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-up.png"] forState:UIControlStateNormal];
-        
-        if (_delegate && [_delegate respondsToSelector:@selector(flyoutMenuDidFold:)]) {
-            [_delegate flyoutMenuDidFold:self];
-        }
-        
-		//	also send NSNotification?
-    }];
-}
-
-#pragma mark -
-
-- (RTFlyoutItem *)addItemWithImage:(UIImage *)image parentItem:(RTFlyoutItem *)parentItem {
-	
-	NSUInteger itemIndex = 0;
-	if (parentItem) {
-		itemIndex = [parentItem.items count];
-	} else {
-		itemIndex = [self.items count];
-	}
-
-	RTFlyoutItem *i = [RTFlyoutItem itemWithImage:image title:nil index:itemIndex];
-	
-	if (parentItem) {
-		i.parentItem = parentItem;
-		[parentItem.items addObject:i];
-	} else {
-		i.parentItem = nil;
-		[self.items addObject:i];
-	}
-	
-	return i;
-}
-
-- (RTFlyoutItem *)addItemWithTitle:(NSString *)title parentItem:(RTFlyoutItem *)parentItem {
-	
-	NSUInteger itemIndex = 0;
-	if (parentItem) {
-		itemIndex = [parentItem.items count];
-	} else {
-		itemIndex = [self.items count];
-	}
-	
-	RTFlyoutItem *i = [RTFlyoutItem itemWithImage:nil title:title index:itemIndex];
-	
-	if (parentItem) {
-		i.parentItem = parentItem;
-		[parentItem.items addObject:i];
-	} else {
-		i.parentItem = nil;
-		[self.items addObject:i];
-	}
-
-	return i;
-}
-
-
-#pragma mark - Setup frames and views
-
-- (void)setupAll {
-	
-	//	options processing
-	if (self.kind == kRTFlyoutMenuKindHovering) {
 		
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		//	if some dimension is passed as 0, that means it should take the whole available space
-		
+		_indexOfOpenSubmenu = -1;
 	}
 	
-    
-	CGRect frame = CGRectZero;
-	
-	if (self.kind == kRTFlyoutMenuKindHovering) {
-		frame = [self createFoldedMainFrameForPosition:_position];
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		frame = [self createUnfoldedMainFrameForPosition:_position];
+	//	inform delegate
+	if (isMainItem && [self.delegate respondsToSelector:@selector(flyoutMenu:didSelectMainItemWithIndex:)]) {
+		[self.delegate flyoutMenu:self didSelectMainItemWithIndex:sender.mainItemIndex];
+	} else if ([self.delegate respondsToSelector:@selector(flyoutMenu:didSelectSubItemWithIndex:mainMenuItemIndex:)]) {
+		[self.delegate flyoutMenu:self didSelectSubItemWithIndex:sender.subItemIndex mainMenuItemIndex:sender.mainItemIndex];
 	}
-    [self setFrame:frame];
-    [self setClipsToBounds:YES];
-    
-	if (self.kind == kRTFlyoutMenuKindHovering) {
-		[self setupMainButton];
-		[self addSubview:_mainButton];
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		_mainButton = nil;
-	}
-    
-	UIImage *resizedBgImage = [[UIImage imageNamed:@"mainBackground.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(20, 5, 23, 5)];
-    _mainBackgroundImageView = [[UIImageView alloc] initWithImage:resizedBgImage];
-	_mainBackgroundImageView.frame = (CGRect){.size=self.bounds.size};
-	_mainBackgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
-    [self addSubview:_mainBackgroundImageView];
-    [self sendSubviewToBack:_mainBackgroundImageView];
-    [_mainBackgroundImageView setAlpha:0.0f];
-    
-    [self setupContentView];
-    [self addSubview:_contentView];
-	
-	[self addItemsToContentView:nil];
-	
-	if (self.kind == kRTFlyoutMenuKindStatic) {
-		[self unfoldWithAnimationDuration:0];
-	}
-	
-	//	setup springs and struts
-	switch (self.position) {
-		case kRTFlyoutMenuPositionTop:
-			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleLeftMargin;
-			break;
-			
-		case kRTFlyoutMenuPositionBottom:
-			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleLeftMargin;
-			break;
-			
-		case kRTFlyoutMenuPositionTopLeft:
-			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin;
-			break;
-			
-		case kRTFlyoutMenuPositionTopRight:
-			self.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin;
-			break;
-			
-		case kRTFlyoutMenuPositionBottomLeft:
-			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleRightMargin;
-			break;
-			
-		case kRTFlyoutMenuPositionBottomRight:
-			self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin;
-			break;
-			
-		default:
-			break;
-	}
-	
-//	_contentView.backgroundColor = [UIColor redColor];
-	
-    [self.parentView addSubview:self];
 	
 }
 
-#pragma mark - Main button + menu
-
-- (void)setupMainButton {
-    CGFloat x = (self.menuHoverSize.width - self.mainButtonSize.width) / 2;
-    CGFloat y = (self.menuHoverSize.height - self.mainButtonSize.height) / 2;
-    
-    _mainButton = [[UIButton alloc] initWithFrame:CGRectMake(x, y, self.mainButtonSize.width, self.mainButtonSize.height)];
-    [_mainButton setBackgroundImage:[UIImage imageNamed:@"main-button-up.png"] forState:UIControlStateNormal];
-	switch (self.position) {
-		case kRTFlyoutMenuPositionBottomRight:
-		case kRTFlyoutMenuPositionTopRight:
-			[_mainButton setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin];
-			break;
-			
-		case kRTFlyoutMenuPositionBottomLeft:
-		case kRTFlyoutMenuPositionTopLeft:
-			[_mainButton setAutoresizingMask:UIViewAutoresizingFlexibleRightMargin];
-			break;
-			
-		default:
-			[_mainButton setAutoresizingMask:UIViewAutoresizingNone];
-			break;
-	}
-    [_mainButton addTarget:self action:@selector(mainButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-}
-
-- (CGRect)createFoldedMainFrameForPosition:(RTFlyoutMenuPosition)position {
-    CGRect frame;
+- (void)reloadData {
 	
-    switch (position) {
-        case kRTFlyoutMenuPositionBottomRight:
-            frame = CGRectMake([_parentView bounds].size.width - (self.menuHoverSize.width + self.menuMargins.right), [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), self.menuHoverSize.width, self.menuHoverSize.height);
-            break;
-        case kRTFlyoutMenuPositionBottomLeft:
-            frame = CGRectMake(self.menuMargins.left, [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), self.menuHoverSize.width, self.menuHoverSize.height);
-            break;
-        case kRTFlyoutMenuPositionTopRight:
-            frame = CGRectMake([_parentView bounds].size.width - (self.menuHoverSize.width + self.menuMargins.right), self.menuMargins.top, self.menuHoverSize.width, self.menuHoverSize.height);
-            break;
-        case kRTFlyoutMenuPositionTopLeft:
-            frame = CGRectMake(self.menuMargins.left, self.menuMargins.top, self.menuHoverSize.width, self.menuHoverSize.height);
-            break;
-        default:
-            frame = CGRectZero;
-            break;
-    }
+	//	reset
+	[self.submenus removeAllObjects];
+	[self.mainItemFrames removeAllObjects];
+	[self.mainItemTitles removeAllObjects];
+	[self.subItemTitles removeAllObjects];
+	self.numberOfMainItems = 0;
+	self.indexOfOpenSubmenu = -1;
+
+	//	get data
+	[self fetchData];
+
+	//	remove menu
+	[self removeFromSuperview];
+	self.frame = CGRectZero;
 	
-    return frame;
-}
-
-- (CGRect)createUnfoldedMainFrameForPosition:(RTFlyoutMenuPosition)position {
-    CGRect frame;
+	//	re-render
+	[self renderMainMenu];
 	
-    switch (position) {
-        case kRTFlyoutMenuPositionBottomRight:
-        case kRTFlyoutMenuPositionBottomLeft:
-            frame = CGRectMake(self.menuMargins.left, [[self superview] bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), [[self superview] bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
-            break;
-			
-        case kRTFlyoutMenuPositionTopRight:
-        case kRTFlyoutMenuPositionTopLeft:
-            frame = CGRectMake(self.menuMargins.left, self.menuMargins.top, [[self superview] bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
-            break;
-			
-        case kRTFlyoutMenuPositionBottom:
-            frame = CGRectMake(self.menuMargins.left, [_parentView bounds].size.height - (self.menuHoverSize.height + self.menuMargins.bottom), [_parentView bounds].size.width - self.menuMargins.left - self.menuMargins.right, self.menuHoverSize.height);
-            break;
-			
-        case kRTFlyoutMenuPositionTop: {
-			CGSize allItemsSize = [self calculateSizeToFitAllItemsOf:nil];
-			CGFloat availableWidth = [_parentView bounds].size.width - self.menuMargins.left - self.menuMargins.right;
-            frame = CGRectMake(self.menuMargins.left + (availableWidth - allItemsSize.width)/2, self.menuMargins.top, allItemsSize.width, self.menuStaticSize.height);
-            break;
-		}
-			
-        default:
-            frame = CGRectZero;
-            break;
-    }
-	
-    return frame;
-}
-
-#pragma mark - Content for the main menu
-
-- (void)setupContentView {
-	CGRect f = CGRectZero;
-	if (self.kind == kRTFlyoutMenuKindHovering) {
-		f = [self createFoldedContentViewFrameForPosition:_position];
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		f = [self createUnfoldedContentViewFrameForPosition:_position];
-	}
-    _contentView = [[UIView alloc] initWithFrame:f];
-//    [_contentView setClipsToBounds:YES];
-    [_contentView setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
-}
-
-- (CGRect)createFoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position {
-    CGRect frame = CGRectZero;
-	if (self.kind == kRTFlyoutMenuKindHovering) {
-		switch (position) {
-			case kRTFlyoutMenuPositionBottomRight:
-			case kRTFlyoutMenuPositionTopRight:
-				frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, 0, self.menuHoverSize.height);
-				break;
-				
-			case kRTFlyoutMenuPositionBottomLeft:
-			case kRTFlyoutMenuPositionTopLeft:
-				frame = CGRectMake([self bounds].origin.x + self.menuHoverSize.width, [self bounds].origin.y, 0, self.menuHoverSize.height);
-				break;
-				
-			default:
-				break;
-		}
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, 0, self.menuHoverSize.height);
-	}
-    
-    return frame;
-}
-
-- (CGRect)createUnfoldedContentViewFrameForPosition:(RTFlyoutMenuPosition)position {
-    CGRect frame = CGRectZero;
-	if (self.kind == kRTFlyoutMenuKindHovering) {
-		switch (position) {
-			case kRTFlyoutMenuPositionBottomRight:
-			case kRTFlyoutMenuPositionTopRight:
-				frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, [self bounds].size.width - self.menuHoverSize.width, self.menuHoverSize.height);
-				break;
-				
-			case kRTFlyoutMenuPositionBottomLeft:
-			case kRTFlyoutMenuPositionTopLeft:
-				frame = CGRectMake([self bounds].origin.x + self.menuHoverSize.width, [self bounds].origin.y, [self bounds].size.width - self.menuHoverSize.width, self.menuHoverSize.height);
-				break;
-				
-			default:
-				break;
-		}
-	} else if (self.kind == kRTFlyoutMenuKindStatic) {
-		switch (position) {
-			case kRTFlyoutMenuPositionTop:
-				frame = CGRectMake([self bounds].origin.x, [self bounds].origin.y, (self.menuStaticSize.width) ? self.menuStaticSize.width : [self bounds].size.width, self.menuStaticSize.height);
-				break;
-				
-			default:
-				break;
-		}
-	}
-
-    return frame;
-}
-
-- (void)addItemsToContentView:(RTFlyoutItem *)parentItem {
-	
-	NSArray *allItems = (parentItem) ? parentItem.items : self.items;
-	__block CGFloat currentX = self.contentInsets.left;
-	[allItems enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-		RTFlyoutItem *i = (RTFlyoutItem *)obj;
-
-		if (idx > 0) currentX += self.interItemSpacing;
-		CGRect f = i.frame;
-		f.origin.x = currentX;
-		f.origin.y = self.contentInsets.top;
-		i.frame = f;
-		
-		currentX += f.size.width;
-
-		[i setAutoresizingMask:UIViewAutoresizingNone];
-		[i addTarget:self action:@selector(innerButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-
-		[_contentView addSubview:i];
-	}];
-	
-}
-
-- (CGSize)calculateSizeToFitAllItemsOf:(RTFlyoutItem *)parentItem {
-	
-	__block CGSize s = CGSizeZero;
-	
-	NSArray *allItems = (parentItem) ? parentItem.items : self.items;
-	[allItems enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-		RTFlyoutItem *i = (RTFlyoutItem *)obj;
-		if (i.bounds.size.height > s.height) s.height = i.bounds.size.height;
-		if (idx > 0) s.width += self.interItemSpacing;
-		s.width += i.bounds.size.width;
-	}];
-	
-	s.height += self.contentInsets.top + self.contentInsets.bottom;
-	s.width += self.contentInsets.left + self.contentInsets.right;
-	
-	return s;
-}
-
-
-#pragma mark - Submenu 
-
-- (void)openSubmenuForParentItem:(RTFlyoutItem *)parentItem unfoldDirection:(RTFlyoutMenuUnfoldDirection)unfoldDirection {
-
-	if (!parentItem.submenu) {
-		//	make view
-		CGRect frame = [self createUnfoldedSubmenuFrameForParentItem:parentItem unfoldDirection:unfoldDirection];
-		UIView *submenuView = [[UIView alloc] initWithFrame:frame];
-		
-		//	render background
-		UIImage *resizedBgImage = [[UIImage imageNamed:@"submenuBackground.png"] resizableImageWithCapInsets:UIEdgeInsetsMake(8, 4, 7, 4)];
-		UIImageView *subBackgroundImageView = [[UIImageView alloc] initWithImage:resizedBgImage];
-		subBackgroundImageView.frame = (CGRect){.size=frame.size};
-		subBackgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
-		[submenuView addSubview:_mainBackgroundImageView];
-		[submenuView sendSubviewToBack:_mainBackgroundImageView];
-		
-		//	add items
-		NSArray *allItems = parentItem.items;
-		__block CGFloat currentY = 8;
-		[allItems enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-			RTFlyoutItem *i = (RTFlyoutItem *)obj;
-			
-			CGRect f = i.frame;
-			f.origin.x = 4;
-			f.origin.y = currentY;
-			i.frame = f;
-			
-			currentY += f.size.height;
-			
-			[i setAutoresizingMask:UIViewAutoresizingNone];
-			[i addTarget:self action:@selector(innerButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-			
-			[submenuView addSubview:i];
-		}];
-		
-		parentItem.submenu = submenuView;
-	}
-	
-	[self addSubview:parentItem.submenu];
-}
-
-- (CGRect)createUnfoldedSubmenuFrameForParentItem:(RTFlyoutItem *)parentItem unfoldDirection:(RTFlyoutMenuUnfoldDirection)unfoldDirection {
-    CGRect frame;
-	
-	CGRect parentItemFrame = parentItem.frame;
-	NSUInteger numberOfItems = [parentItem.items count];
-	
-    switch (unfoldDirection) {
-        case kRTFlyoutMenuUnfoldDirectionBottom: {
-            frame = CGRectMake(parentItemFrame.origin.x, parentItemFrame.origin.y + parentItemFrame.size.height-10, 200, numberOfItems*44+10);
-            break;
-		}
-			
-        default:
-            frame = CGRectZero;
-            break;
-    }
-	
-    return frame;
 }
 
 @end

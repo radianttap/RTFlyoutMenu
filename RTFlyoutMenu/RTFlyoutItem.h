@@ -10,13 +10,8 @@
 
 @interface RTFlyoutItem : UIButton
 
-+ (id)itemWithImage:(UIImage *)image title:(NSString *)title index:(NSUInteger)index;
-@property (nonatomic, strong) NSMutableArray *items;
 @property (nonatomic, getter = isActive) BOOL active;
-@property (nonatomic, strong) RTFlyoutItem *parentItem;
-@property (nonatomic, strong) UIView *submenu;
-
-- (void)updateWithChildItem:(RTFlyoutItem *)childItem;
-- (void)resetToOriginal;
+@property (nonatomic) NSUInteger mainItemIndex;
+@property (nonatomic) NSUInteger subItemIndex;
 
 @end
