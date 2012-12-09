@@ -225,6 +225,7 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 		
 		CGRect f = sv.frame;
 		f.origin = CGPointMake(mainItemFrame.origin.x, mainItemFrame.origin.y + mainItemFrame.size.height - self.contentInsets.bottom);
+		f.origin.y = 0;
 		f.size = CGSizeMake(itemWidth + self.contentInsets.left + self.contentInsets.right, currentY + self.contentInsets.bottom);
 		CGFloat diff = self.bounds.size.width - (f.origin.x + f.size.width);
 		if (diff < 0) f.origin.x += diff;
@@ -254,38 +255,38 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 	NSInteger itemIndex = [self.mainItems indexOfObject:item];
 	CGRect oldItemFrame = [[self.mainItemFrames objectAtIndex:itemIndex] CGRectValue];
 	CGSize newFrameSize = CGSizeMake(titleTextSize.width + self.mainItemInsets.left + self.mainItemInsets.right, titleTextSize.height + self.mainItemInsets.top + self.mainItemInsets.bottom);
-	CGFloat diff = newFrameSize.width - oldItemFrame.size.width;
 	
+	CGFloat diff = newFrameSize.width - oldItemFrame.size.width;
 	if (diff == 0) return;
 
-	//	update tapped item
-	CGRect f = oldItemFrame;
-	f.size = newFrameSize;
-	f.origin.x -= diff;
-	[self.mainItemFrames replaceObjectAtIndex:itemIndex withObject:[NSValue valueWithCGRect:f]];
-	
-	//	update items before the tapped one
-	for (NSInteger i = 0; i < itemIndex; i++) {
-		CGRect f = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
-		f.origin.x -= diff;
-		[self.mainItemFrames replaceObjectAtIndex:i withObject:[NSValue valueWithCGRect:f]];
-	}
-	
 	//	update menu frame
 	CGRect menuFrame = self.frame;
 	menuFrame.origin.x -= diff;
 	menuFrame.size.width += diff;
 	
+	//	update tapped item
+	CGRect f = oldItemFrame;
+	f.size = newFrameSize;
+	[self.mainItemFrames replaceObjectAtIndex:itemIndex withObject:[NSValue valueWithCGRect:f]];
+	
+	//	update items after the tapped one
+	NSUInteger framesCount = [self.mainItemFrames count];
+	for (NSInteger i = itemIndex+1; i < framesCount; i++) {
+		CGRect fi = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
+		fi.origin.x += diff;
+		[self.mainItemFrames replaceObjectAtIndex:i withObject:[NSValue valueWithCGRect:fi]];
+	}
+	
 	//	animate the change
 	[UIView animateWithDuration:self.animationDuration animations:^{
 		self.frame = menuFrame;
-		for (NSInteger i = 0; i <= itemIndex; i++) {
-			CGRect f = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
-			[(RTFlyoutItem *)self.mainItems setFrame:f];
+		for (NSInteger i = itemIndex; i < framesCount; i++) {
+			CGRect fi = [[self.mainItemFrames objectAtIndex:i] CGRectValue];
+			[(RTFlyoutItem *)[self.mainItems objectAtIndex:i] setFrame:fi];
 		}
 		
 	} completion:^(BOOL finished) {
-		[item setTitle:newTitle forState:UIControlEventTouchUpInside];
+		[item setTitle:newTitle forState:UIControlStateNormal];
 	}];
 
 }
@@ -371,12 +372,13 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 		//	and close the submenu
 		{
 			UIView *sv = [self renderSubmenuAtIndex:self.indexOfOpenSubmenu];
-			CGRect f = sv.frame;
+			CGRect f = sv.frame, forig = f;
 			f.size = CGSizeMake(f.size.width, 0);
 			[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 				sv.frame = f;
 			} completion:^(BOOL finished) {
 				[sv removeFromSuperview];
+				sv.frame = forig;
 			}];
 		}
 		
