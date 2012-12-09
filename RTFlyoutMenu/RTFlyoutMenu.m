@@ -133,7 +133,6 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 			[self.subItemTitles addObject:a];
 		}
 	}
-	
 }
 
 
@@ -179,7 +178,8 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 	mainBackgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
     [self addSubview:mainBackgroundImageView];
     [self sendSubviewToBack:mainBackgroundImageView];
-
+	
+	self.clipsToBounds = NO;
 }
 
 - (UIView *)renderSubmenuAtIndex:(NSUInteger)index {
@@ -193,13 +193,14 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 		UIFont *buttonFont = [UIFont fontWithName:@"AvenirNext-DemiBold" size:15.0];
 		CGRect mainItemFrame = [[self.mainItemFrames objectAtIndex:index] CGRectValue];
 		
-		CGFloat currentX = self.contentInsets.left, currentY = self.contentInsets.top, itemWidth = 0;
 		sv = [[UIView alloc] initWithFrame:CGRectZero];
 		sv.clipsToBounds = YES;
 		
 		NSArray *subtitles = [self.subItemTitles objectAtIndex:index];
 		
 		if ([subtitles count] == 0) return sv;
+		
+		CGFloat currentX = self.contentInsets.left, currentY = self.contentInsets.top, itemWidth = 0;
 		
 		for (NSString *subTitle in subtitles) {
 			CGSize titleTextSize = [subTitle sizeWithFont:buttonFont constrainedToSize:CGSizeMake(1000, 1000)];
@@ -223,9 +224,34 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 			[sv addSubview:btn];
 		}
 		
+		//	lastly, add main menu item
+		{
+			//	TODO: there should be a separator here, dotted lines or something
+			
+			NSString *subTitle = [self.mainItemTitles objectAtIndex:index];
+			CGSize titleTextSize = [subTitle sizeWithFont:buttonFont constrainedToSize:CGSizeMake(1000, 1000)];
+			if (titleTextSize.height < self.innerItemSize.height) titleTextSize.height = self.innerItemSize.height;
+			
+			RTFlyoutItem *btn = [RTFlyoutItem buttonWithType:UIButtonTypeCustom];
+			btn.mainItemIndex = index;
+			btn.subItemIndex = -2;
+			[btn setFrame:CGRectMake(currentX, currentY, titleTextSize.width + self.subItemInsets.left + self.subItemInsets.right, titleTextSize.height + self.subItemInsets.top + self.subItemInsets.bottom)];
+			[btn setTitleEdgeInsets:self.subItemInsets];
+			[btn.titleLabel setFont:buttonFont];
+			[btn setBackgroundColor:[UIColor clearColor]];
+			[btn setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+			[btn setTitle:subTitle forState:UIControlStateNormal];
+			[btn addTarget:self action:@selector(itemTapped:) forControlEvents:UIControlEventTouchUpInside];
+			
+			currentY += btn.bounds.size.height;
+			if (itemWidth < btn.bounds.size.width) itemWidth = btn.bounds.size.width;
+			
+			[sv addSubview:btn];
+		}
+		
 		CGRect f = sv.frame;
 		f.origin = CGPointMake(mainItemFrame.origin.x, mainItemFrame.origin.y + mainItemFrame.size.height - self.contentInsets.bottom);
-		f.origin.y = 0;
+//		f.origin.y = 0;	//	DEBUG!
 		f.size = CGSizeMake(itemWidth + self.contentInsets.left + self.contentInsets.right, currentY + self.contentInsets.bottom);
 		CGFloat diff = self.bounds.size.width - (f.origin.x + f.size.width);
 		if (diff < 0) f.origin.x += diff;
@@ -288,7 +314,6 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 	} completion:^(BOOL finished) {
 		[item setTitle:newTitle forState:UIControlStateNormal];
 	}];
-
 }
 
 
@@ -306,6 +331,10 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 			UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
 			CGRect f = sv.frame, forig = f;
 			f.size = CGSizeMake(f.size.width, 0);
+
+			CGPoint originInCanvas = [self.canvasView convertPoint:forig.origin toView:self];
+			forig.origin = originInCanvas;
+
 			[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 				sv.frame = f;
 			} completion:^(BOOL finished) {
@@ -322,6 +351,10 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 				UIView *sv = [self renderSubmenuAtIndex:self.indexOfOpenSubmenu];
 				CGRect f = sv.frame, forig = f;
 				f.size = CGSizeMake(f.size.width, 0);
+
+				CGPoint originInCanvas = [self.canvasView convertPoint:forig.origin toView:self];
+				forig.origin = originInCanvas;
+
 				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 					sv.frame = f;
 				} completion:^(BOOL finished) {
@@ -335,8 +368,14 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 				UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
 				CGRect f = sv.frame, ffinal = f;
 				f.size = CGSizeMake(f.size.width, 0);
+				
+				CGPoint originInCanvas = [self convertPoint:f.origin toView:self.canvasView];
+				f.origin = originInCanvas;
+				ffinal.origin = originInCanvas;
+				
 				sv.frame = f;
-				[self addSubview:sv];
+				[self.canvasView addSubview:sv];
+				
 				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 					sv.frame = ffinal;
 				} completion:nil];
@@ -351,8 +390,14 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 				UIView *sv = [self renderSubmenuAtIndex:sender.mainItemIndex];
 				CGRect f = sv.frame, ffinal = f;
 				f.size = CGSizeMake(f.size.width, 0);
+
+				CGPoint originInCanvas = [self convertPoint:f.origin toView:self.canvasView];
+				f.origin = originInCanvas;
+				ffinal.origin = originInCanvas;
+				
 				sv.frame = f;
-				[self addSubview:sv];
+				[self.canvasView addSubview:sv];
+
 				[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 					sv.frame = ffinal;
 				} completion:nil];
@@ -374,6 +419,10 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 			UIView *sv = [self renderSubmenuAtIndex:self.indexOfOpenSubmenu];
 			CGRect f = sv.frame, forig = f;
 			f.size = CGSizeMake(f.size.width, 0);
+
+			CGPoint originInCanvas = [self.canvasView convertPoint:forig.origin toView:self];
+			forig.origin = originInCanvas;
+
 			[UIView animateWithDuration:self.animationDuration delay:0 options:UIViewAnimationCurveEaseIn animations:^{
 				sv.frame = f;
 			} completion:^(BOOL finished) {
@@ -391,7 +440,6 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 	} else if ([self.delegate respondsToSelector:@selector(flyoutMenu:didSelectSubItemWithIndex:mainMenuItemIndex:)]) {
 		[self.delegate flyoutMenu:self didSelectSubItemWithIndex:sender.subItemIndex mainMenuItemIndex:sender.mainItemIndex];
 	}
-	
 }
 
 - (void)reloadData {
@@ -413,7 +461,6 @@ NSString *const RTFlyoutMenuUIOptionAnimationDuration = @"kRTFlyoutMenuUIOptionA
 	
 	//	re-render
 	[self renderMainMenu];
-	
 }
 
 @end

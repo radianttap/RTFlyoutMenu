@@ -49,6 +49,8 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 @property (nonatomic, readonly) RTFlyoutMenuPosition position;
 @property (nonatomic, readonly) RTFlyoutMenuUnfoldDirection unfoldDirection;
 
+@property (nonatomic, weak) UIView *canvasView;
+
 //	##	methods
 - (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate dataSource:(id <RTFlyoutMenuDataSource>)dataSource position:(RTFlyoutMenuPosition)position options:(NSDictionary *)options;
 

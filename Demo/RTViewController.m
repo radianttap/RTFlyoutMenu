@@ -43,6 +43,7 @@
 		RTFlyoutMenuUIOptionInnerItemSize: [NSValue valueWithCGSize:CGSizeMake(22, 22)]
 	};
 	RTFlyoutMenu *m = [[RTFlyoutMenu alloc] initWithDelegate:self dataSource:self position:kRTFlyoutMenuPositionTop options:options];
+	m.canvasView = self.view;
 
 	CGRect mf = m.frame;
 	CGRect cf = self.menuContainerView.bounds;
