@@ -11,6 +11,7 @@
 
 @interface RTViewController ()
 
+@property (strong, nonatomic) RTFlyoutMenu *flyoutMenu;
 @property (weak, nonatomic) IBOutlet UIView *menuContainerView;
 
 @property (nonatomic) NSArray *mainItems;
@@ -31,7 +32,30 @@
 		@[@"iPod shuffle", @"iPod nano", @"iPod touch", @"iPod classic", @"Apple TV", @"Accessories"],
 		@[@"iPhone 5", @"Compare models", @"App Store"],
 		@[@"iPad with Retina display", @"iPad mini"],
-		@[]
+  @[@"'Golden' - Lady Antebellum",
+	@"'The 20/20 Experience' - Justin Timberlake",
+	@"'Annie Up' - Pistol Annies",
+	@"'Now That's What I ...' - Various Artists",
+	@"'Night Visions' - Imagine Dragons",
+	@"'To Be Loved' - Michael Bublé",
+	@"'Life On a Rock' - Kenny Chesney",
+	@"'The Music of Nashv...' - Nashville Cast",
+	@"'Based On a True St...' - Blake Shelton",
+	@"'My Head Is An Animal' - Of Monsters and Men",
+	@"'Modern Vampires of...' - Vampire Weekend",
+	@"'Save Rock and Roll' - Fall Out Boy",
+	@"'Golden' - Lady Antebellum",
+	@"'The 20/20 Experience' - Justin Timberlake",
+	@"'Annie Up' - Pistol Annies",
+	@"'Now That's What I ...' - Various Artists",
+	@"'Night Visions' - Imagine Dragons",
+	@"'To Be Loved' - Michael Bublé",
+	@"'Life On a Rock' - Kenny Chesney",
+	@"'The Music of Nashv...' - Nashville Cast",
+	@"'Based On a True St...' - Blake Shelton",
+	@"'My Head Is An Animal' - Of Monsters and Men",
+	@"'Modern Vampires of...' - Vampire Weekend",
+	@"'Save Rock and Roll' - Fall Out Boy"]
 	];
 	
 }
@@ -40,7 +64,8 @@
 	[super viewDidAppear:animated];
 
 	NSDictionary *options = @{
-		RTFlyoutMenuUIOptionInnerItemSize: [NSValue valueWithCGSize:CGSizeMake(22, 22)]
+		RTFlyoutMenuUIOptionInnerItemSize: [NSValue valueWithCGSize:CGSizeMake(22, 22)],
+		RTFlyoutMenuUIOptionSubItemPaddings: [NSValue valueWithUIEdgeInsets:UIEdgeInsetsMake(10, 15, 10, 15)]
 	};
 	RTFlyoutMenu *m = [[RTFlyoutMenu alloc] initWithDelegate:self dataSource:self position:kRTFlyoutMenuPositionTop options:options];
 	m.canvasView = self.view;
@@ -57,6 +82,7 @@
 
 //	m.backgroundColor = [UIColor redColor];
 	[self.menuContainerView addSubview:m];
+	self.flyoutMenu = m;
 
 	//	look & feel
 	[[RTFlyoutItem appearanceWhenContainedIn:[self.menuContainerView class], nil] setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
@@ -64,8 +90,12 @@
 	
 }
 
-//- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {}
-
+//	fix rotation issues
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
+	[super didRotateFromInterfaceOrientation:fromInterfaceOrientation];
+	
+	[self recenterFlyoutMenu];
+}
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
@@ -73,10 +103,31 @@
 }
 
 
+- (void)recenterFlyoutMenu {
+	
+	CGRect cf = self.menuContainerView.bounds;
+	CGRect mf = self.flyoutMenu.frame;
+	
+	//	center menu in container view
+	CGFloat newOriginX = (cf.size.width - mf.size.width) / 2;
+	CGFloat newOriginY = (cf.size.height - mf.size.height) / 2;
+	if (newOriginX > 0) mf.origin.x = newOriginX;
+	if (newOriginY > 0) mf.origin.y = newOriginY;
+	
+	self.flyoutMenu.frame = mf;
+	
+	//	TBD: re-position any open submenu
+	
+	//	re-add it to title view (because reloadData on FlyoutMenu will remove it
+	[self.menuContainerView addSubview:self.flyoutMenu];
+}
+
+
+
 #pragma mark - RTFlyoutMenuDataSource
 
 - (NSUInteger)numberOfMainItemsInFlyoutMenu:(RTFlyoutMenu *)flyoutMenu {
-	return 6;
+	return [self.mainItems count];
 }
 
 - (NSString *)flyoutMenu:(RTFlyoutMenu *)flyoutMenu titleForMainItem:(NSUInteger)mainItemIndex {
@@ -107,6 +158,10 @@
 
 - (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectSubItemWithIndex:(NSInteger)subIndex mainMenuItemIndex:(NSInteger)mainIndex {
     NSLog(@"Tap on main/sub index: %d / %d", mainIndex, subIndex);
+}
+
+- (void)didReloadFlyoutMenu:(RTFlyoutMenu *)flyoutMenu {
+	[self recenterFlyoutMenu];
 }
 
 @end

@@ -35,6 +35,8 @@ extern NSString *const RTFlyoutMenuUIOptionInnerItemSize;
 extern NSString *const RTFlyoutMenuUIOptionContentInsets;
 //	how long will fold/unfold last
 extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
+//	sub-item padding
+extern NSString *const RTFlyoutMenuUIOptionSubItemPaddings;
 
 
 
@@ -51,10 +53,13 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 
 @property (nonatomic, weak) UIView *canvasView;
 
+@property (nonatomic, strong) NSMutableArray *selectedItemTitles;
+
 //	##	methods
 - (id)initWithDelegate:(id <RTFlyoutMenuDelegate>)delegate dataSource:(id <RTFlyoutMenuDataSource>)dataSource position:(RTFlyoutMenuPosition)position options:(NSDictionary *)options;
 
 - (void)reloadData;
+- (void)reset;
 
 @end
 
@@ -68,6 +73,7 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 @optional
 - (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectMainItemWithIndex:(NSInteger)index;
 - (void)flyoutMenu:(RTFlyoutMenu *)flyoutMenu didSelectSubItemWithIndex:(NSInteger)subIndex mainMenuItemIndex:(NSInteger)mainIndex;
+- (void)didReloadFlyoutMenu:(RTFlyoutMenu *)flyoutMenu;
 
 @end
 
@@ -95,6 +101,7 @@ extern NSString *const RTFlyoutMenuUIOptionAnimationDuration;
 @property (nonatomic) UIEdgeInsets subItemInsets;
 @property (nonatomic) CGFloat interItemSpacing;
 @property (nonatomic) CGFloat animationDuration;
+@property (nonatomic) NSInteger subItemsPerColumn;
 
 //	local
 @property (nonatomic, readwrite) RTFlyoutMenuPosition position;
