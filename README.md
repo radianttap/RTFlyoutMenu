@@ -1,3 +1,8 @@
+---
+> Note: this is abandoned. I don't recommend to use it in new projects.
+---
+
+
 RTFlyoutMenu
 ============
 
